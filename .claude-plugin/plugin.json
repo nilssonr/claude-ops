@@ -1,0 +1,11 @@
+{
+  "name": "claude-ops",
+  "description": "DevOps and operational skills, agents, and hooks for Claude Code",
+  "version": "0.1.0",
+  "author": {
+    "name": "nilssonr"
+  },
+  "repository": "https://github.com/nilssonr/claude-ops",
+  "license": "MIT",
+  "keywords": ["devops", "ops", "automation", "ci", "deployment"]
+}

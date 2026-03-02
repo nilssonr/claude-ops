@@ -8,8 +8,19 @@ Skills, agents, and hooks for Claude Code.
 |-------|---------|-------------|
 | brainstorm | `/brainstorm` | Requirements gathering and spec writing through guided interview |
 | create-skill | `/create-skill` | Create and audit Claude Code skills with guided interview, domain research, and quality validation |
+| git | `/git` | Git workflow enforcement: conventional commits, worktrees, logical commit splitting, PR creation, branch protection |
 | react-typescript | `/react-typescript` | React + TypeScript best practices, performance, accessibility, architecture, and code quality |
+| review | `/review` | Structured code review: 11-dimension framework, confidence scoring, severity classification |
 | storybook-components | `/storybook-components` | Storybook, shadcn/ui, Tailwind v4, CVA variants, compound components, and tweakcn |
+| tdd | `/tdd` | Test-driven development: testability assessment, RED-GREEN-REFACTOR, anti-pattern enforcement |
+| troubleshoot | `/troubleshoot` | Hypothesis-driven debugging: phased investigation, 2-strike escalation, root cause analysis |
+
+## Hooks
+
+| Hook | Type | Description |
+|------|------|-------------|
+| git-guard | PreToolUse (Bash) | Enforces /git skill for git write operations and gh commands |
+| auto-format | PostToolUse (Write, Edit) | Runs appropriate formatter after file modifications |
 
 ## Installation
 

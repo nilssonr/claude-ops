@@ -15,20 +15,46 @@ allowed-tools: Read, Grep, Glob, Edit, Write, Bash
 
 # React + TypeScript — Best Practices Guide
 
-You are an expert React + TypeScript developer. Follow these rules when writing, reviewing, or refactoring React code. These rules reflect the current React team recommendations and community consensus.
+You are an expert React + TypeScript developer. Follow these rules when writing, reviewing, or refactoring React code. These rules reflect the current React team recommendations (react.dev), Dan Abramov's and Kent C. Dodds' guidance, and community consensus for React 18+.
 
 ---
 
-## 1. TypeScript Foundations
+## 1. Core Mental Models
+
+These five principles prevent the majority of performance and correctness bugs. Internalize them before reaching for any optimization.
+
+### Components are pure functions; rendering is not painting
+
+Components are pure functions of `(props, state) → JSX`. Same inputs, same output. No side effects during render. React's process is **trigger → render → commit**: a state change triggers a render (React calls your function), then React commits minimal DOM changes. A component may render many times without the DOM changing at all.
+
+### The re-render cascade
+
+React re-renders a component when its state changes, when its parent re-renders, or when a consumed context value changes. **React does NOT check if props changed before re-rendering children** — it re-renders the entire subtree by default. `React.memo` opts into prop comparison, but the default is unconditional child re-rendering. This is the most commonly misunderstood behavior.
+
+### Derive, don't sync
+
+When something can be calculated from existing props or state, **calculate it during render** — don't store it in state and synchronize with `useEffect`. This eliminates extra render passes and sync bugs. For expensive derivations, wrap in `useMemo`. State is the minimal set of changing data: if it doesn't change over time, is passed via props, or can be computed, it's not state.
+
+### Object.is governs equality
+
+`useState` skips re-rendering when the new value is `Object.is`-equal to the current value — but `Object.is({a:1}, {a:1})` is `false`. Context re-renders every consumer when its value changes by `Object.is`. Constants should live outside component scope for truly stable references.
+
+### Composition and colocation over memoization
+
+The recommended optimization order: **colocate state → compose → profile → memoize selectively**. Memoization is the last resort, not the first tool. See Section 6 for details.
+
+---
+
+## 2. TypeScript Foundations
 
 ### Props & Types
 
 - Use `interface` for component props (extendable). Use `type` for unions, tuples, and utility types.
-- Type children explicitly with `React.ReactNode` or `React.PropsWithChildren<P>`. React 18+ does NOT add implicit children to `React.FC`.
+- Type children explicitly with `React.ReactNode`. React 18+ does NOT add implicit children to `React.FC`.
 - Use discriminated unions for component variants — make impossible states unrepresentable.
 - Use `React.ComponentPropsWithoutRef<'element'>` to extend native HTML element props.
 - Prefer type inference over explicit annotations when TypeScript can infer correctly.
-- Avoid `any`. Use `unknown` with type guards instead. Avoid `as` casts — narrow types with control flow.
+- Never use `any`. Use `unknown` with type guards instead. Avoid `as` casts — narrow types with control flow.
 
 ```typescript
 // Discriminated union for variants
@@ -42,53 +68,52 @@ interface ButtonProps extends React.ComponentPropsWithoutRef<'button'> {
 }
 ```
 
-### Event & Ref Typing
+### Event, Ref & Context Typing
 
-- Type events using React's event types: `React.ChangeEvent<HTMLInputElement>`, `React.MouseEvent<HTMLButtonElement>`, etc.
-- Type refs as `React.useRef<HTMLElement | null>(null)`. Use `forwardRef` with explicit generic params: `React.forwardRef<HTMLInputElement, InputProps>`.
-- When exposing imperative APIs, use `useImperativeHandle` with a typed handle interface.
-
-### Context Typing
-
-- Create context with `createContext<T | undefined>(undefined)`.
-- Always pair with a custom hook that throws if context is undefined — never let consumers get `undefined` silently.
+- Type events: `React.ChangeEvent<HTMLInputElement>`, `React.MouseEvent<HTMLButtonElement>`.
+- Type refs: `useRef<HTMLElement | null>(null)`. Use `forwardRef<HTMLInputElement, InputProps>`.
+- Create context with `createContext<T | undefined>(undefined)` and always pair with a custom hook that throws if undefined:
 
 ```typescript
-const MyContext = createContext<MyContextType | undefined>(undefined);
+const ThemeContext = createContext<Theme | undefined>(undefined);
 
-function useMyContext() {
-  const ctx = useContext(MyContext);
-  if (!ctx) throw new Error('useMyContext must be within MyProvider');
+function useTheme() {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be within ThemeProvider');
   return ctx;
 }
 ```
 
 ### Strict Config
 
-Enable strict TypeScript. These should be on:
-`strict`, `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `noImplicitReturns`, `forceConsistentCasingInFileNames`.
+Enable strict TypeScript: `strict`, `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `noImplicitReturns`, `forceConsistentCasingInFileNames`.
 
 ---
 
-## 2. Component Design
+## 3. Component Design
 
 ### Structure
 
-- One responsibility per component. If a component does two unrelated things, split it.
-- Prefer composition over inheritance. Use `children`, slot props, and render delegation.
-- Keep prop surfaces small and focused. A component with 15+ props likely needs splitting.
-- Use the compound component pattern (shared context between related components) for complex UIs like tabs, accordions, and forms.
-- Don't over-abstract. Follow the Rule of Three — only extract a reusable component after seeing the same pattern 3+ times. Three similar lines of code is better than a premature abstraction.
+- One responsibility per component. If it does two unrelated things, split it.
+- Prefer composition over configuration. Use `children`, slot props, and render delegation.
+- Keep prop surfaces small. A component with 15+ props likely needs splitting.
+- Use compound components (shared context between related components) for complex UIs like tabs, accordions, and forms — `<Select><Option>` instead of `<Select options={[...]} />`.
+- Don't over-abstract. Follow the Rule of Three — only extract after seeing the same pattern 3+ times.
 
 ### Controlled vs Uncontrolled
 
-- Default to controlled components for forms requiring validation or cross-field logic.
-- Use uncontrolled components (with refs) for simple, isolated inputs where you only need the value on submit.
-- When building library components, support both patterns when practical.
+- A component should be either **fully controlled** (value + onChange from parent) or **fully uncontrolled** (internal state, with `key` for resetting). Never mix both for the same value.
+- Default to controlled for forms requiring validation or cross-field logic.
+- Use the **"fully uncontrolled with key"** pattern to reset all internal state cleanly:
+
+```tsx
+// Changing recipientId resets ALL internal state in ChatPanel — no useEffect needed
+<ChatPanel key={recipientId} recipientId={recipientId} />
+```
 
 ### Polymorphic Components
 
-Use the `as` prop pattern with TypeScript generics for components that need to render as different elements:
+Use the `as` prop pattern with TypeScript generics for components that render as different elements:
 
 ```typescript
 interface BoxProps<C extends React.ElementType> {
@@ -101,33 +126,34 @@ type Props<C extends React.ElementType> = BoxProps<C> &
 
 ---
 
-## 3. Hooks Rules & Patterns
+## 4. Hooks Rules & Patterns
 
 ### Core Rules
 
 - Only call hooks at the top level. Never inside conditions, loops, or nested functions.
 - Only call hooks from React function components or custom hooks.
-- Every custom hook should have a single concern. Name them `use[Domain]`.
 
-### useEffect — The Most Misused Hook
+### Custom Hook Conventions
 
-**Only use useEffect to synchronize with external systems** (subscriptions, browser APIs, third-party libraries). NOT for:
+- Name hooks for **what** they do: `useOnlineStatus`, not `useEventListenerForOnlineStatus`.
+- Never create lifecycle wrappers (`useMount`, `useUnmount`) — they encode class-component thinking.
+- Don't prefix with `use` unless the function calls other hooks.
+- Extract hooks only when stateful logic is genuinely shared; premature abstraction adds indirection without value.
+
+### useEffect — Synchronization, Not Lifecycle
+
+**Only use useEffect to synchronize with external systems** (subscriptions, browser APIs, third-party libraries, DOM measurements). NOT for:
 
 | Don't use useEffect for | Do this instead |
 |---|---|
 | Computing derived values | Calculate during render or `useMemo` |
 | Handling user events | Event handlers |
 | Resetting state when props change | Use the `key` prop to remount |
-| Chaining state updates (Effect A triggers Effect B) | Single event handler that computes all state |
+| Chaining state updates (A → B → C) | Single event handler that computes all state |
 | Fetching data | TanStack Query, SWR, or framework data loading |
 | Notifying parent of state changes | Call parent callback in the event handler directly |
 
-### useEffect When You Must
-
-- Always return a cleanup function for subscriptions, timers, and event listeners.
-- Include every reactive value in the dependency array. Never suppress `exhaustive-deps`.
-- Use `AbortController` for async operations to prevent race conditions.
-- Use updater functions (`setState(prev => ...)`) to avoid stale state dependencies.
+The dependency array is "when to re-synchronize," not "when to run." Never suppress `exhaustive-deps`. If you want different dependencies, restructure the Effect. Cleanup runs before re-execution and on unmount.
 
 ```typescript
 useEffect(() => {
@@ -140,115 +166,169 @@ useEffect(() => {
 }, [query]);
 ```
 
-### State: useState vs useReducer
+### Stale Closures — The Most Common Hook Bug
 
-- `useState` for simple, independent values.
-- `useReducer` when state transitions are complex, interdependent, or spread across many handlers. Use discriminated union action types.
-- Colocate state as close to where it's used as possible. Only lift state to the nearest common ancestor that needs it.
+Closures capture render-time values. An interval callback created on render 1 will forever see render 1's state. Fixes:
 
-### Performance Hooks
+```typescript
+// BROKEN: count is always 0 inside the interval
+useEffect(() => {
+  const id = setInterval(() => setCount(count + 1), 1000); // stale!
+  return () => clearInterval(id);
+}, []);
 
-- `useMemo`: Only for expensive computations confirmed by profiling. Not needed for simple calculations.
-- `useCallback`: Only when passing callbacks to `React.memo`-wrapped children. Not needed otherwise.
-- `useTransition`: For non-blocking state updates (search inputs, heavy filtering). Keeps UI responsive.
-- `useDeferredValue`: For deferring non-critical renders while keeping urgent updates fast.
-- **React Compiler (v1.0, production-ready)**: Auto-memoizes components. When using the compiler, manual `useMemo`/`useCallback`/`React.memo` are rarely needed. Still understand them for library code and edge cases.
+// FIXED: functional update reads latest state
+useEffect(() => {
+  const id = setInterval(() => setCount(c => c + 1), 1000);
+  return () => clearInterval(id);
+}, []);
+```
+
+Other solutions: add the value to the dependency array, store latest value in a ref, or use `useEffectEvent` (React 19+) for Effect callbacks that should read latest values without re-triggering.
+
+### useState vs useReducer
+
+- `useState` for simple, independent values. Use lazy initializers: `useState(() => expensive())`.
+- `useReducer` when state transitions are complex, interdependent, or spread across many handlers. The `dispatch` function has **guaranteed stable identity** across renders — safe for Context and dependency arrays without causing re-renders. Use discriminated union action types.
+- The `useReducer` + split Context pattern (state context + dispatch context) gives Redux-like architecture with zero dependencies — dispatch-only consumers never re-render on state changes.
 
 ---
 
-## 4. State Management
+## 5. State Management
+
+### State Colocation
+
+Place state as close to where it's used as possible. Form field state belongs in field components, not a global store. Modal open/closed state belongs near the modal. Only lift state when multiple components genuinely need it; only reach for Context when prop drilling becomes unwieldy; only use external stores for truly global, cross-cutting concerns.
+
+### State Shape Principles
+
+- **Group related state** — values that always change together belong in one `useState` or `useReducer`.
+- **Avoid contradictions** — use status enums (`'idle' | 'loading' | 'error' | 'success'`) instead of boolean pairs (`isLoading` + `isError`).
+- **Avoid redundancy** — derive instead of storing.
+- **Avoid duplication** — store IDs, not object copies.
+- **Flatten nested structures** — normalize like a database.
 
 ### Decision Framework
 
 | State Type | Solution |
 |---|---|
 | Local UI state (open/close, form input) | `useState` / `useReducer` |
-| Shared UI state (theme, sidebar, locale) | React Context |
-| Cross-cutting global state (cart, auth token) | Zustand or Jotai |
+| Shared UI state (theme, sidebar, locale) | React Context (with `useMemo` on value) |
+| Cross-cutting global state (cart, auth) | Zustand (~3KB) or Jotai (~3.5KB) |
+| High-frequency updates (typing, mouse) | Zustand/Jotai selectors (NOT Context) |
 | Server/API state (fetched data, cache) | TanStack Query or SWR |
 
 **Never** store server state in Context or Zustand. Use a data-fetching library.
 
 ### Context Performance
 
-- Split unrelated state into separate contexts. Every consumer re-renders when any part of context changes.
-- Separate data context from dispatch context (avoids re-rendering dispatch-only consumers).
-- For high-frequency updates, use `useSyncExternalStore` or atomic state (Jotai/Zustand) instead of Context.
+- Context re-renders **every** consumer when its value changes (`Object.is`). The most common mistake: creating a new object in the Provider's `value` prop every render — `useMemo` the value.
+- Split state and dispatch into separate contexts (`dispatch` has stable identity).
+- Context is fundamentally unsuitable for high-frequency updates — use Zustand/Jotai selectors instead.
 
 ---
 
-## 5. Performance
+## 6. Performance
 
-### Rendering
+### Composition First — Before You Memo
 
-- Don't create components inside other components — they remount on every render.
-- Avoid inline object/array literals as props — they create new references each render.
-- Use stable, unique keys for lists (database IDs). Never use array indices for dynamic lists. Never use `Math.random()`.
-- Split large components so state changes re-render smaller subtrees.
+Two patterns that improve architecture AND performance without memoization:
 
-### Bundle Size
+**Move state down** — extract the stateful part into its own component so siblings don't re-render:
 
-- Import specific modules, not barrels: `import { debounce } from 'lodash-es/debounce'`.
+```tsx
+// BEFORE: ExpensiveList re-renders on every keystroke
+function Page() {
+  const [query, setQuery] = useState('');
+  return (<><SearchInput value={query} onChange={setQuery} /><ExpensiveList /></>);
+}
+
+// AFTER: ExpensiveList is unaffected by SearchInput's state
+function SearchSection() {
+  const [query, setQuery] = useState('');
+  return <SearchInput value={query} onChange={setQuery} />;
+}
+function Page() {
+  return (<><SearchSection /><ExpensiveList /></>);
+}
+```
+
+**Lift content up** — pass expensive children as props so they're created by a non-re-rendering ancestor:
+
+```tsx
+function ScrollTracker({ children }: { children: React.ReactNode }) {
+  const [scrollY, setScrollY] = useState(0);
+  // children was created by Page's parent — not recreated when scrollY changes
+  return <div onScroll={e => setScrollY(e.currentTarget.scrollTop)}>{children}</div>;
+}
+```
+
+### React Compiler
+
+React Compiler 1.0 (stable October 2025) is a build-time Babel plugin that automatically inserts granular memoization through static analysis. Production results: Meta Quest Store saw up to 12% faster initial loads and 2.5x faster interactions.
+
+- **New code**: Rely on the compiler. Reserve manual `useMemo`/`useCallback`/`React.memo` as escape hatches for edge cases.
+- **Existing code**: Leave manual memoization in place — removing it can change compilation output.
+- **Without the compiler**: `useCallback` is pointless without `React.memo` on the receiving component (the child re-renders anyway). Only `useMemo` expensive computations confirmed by profiling.
+
+### Rendering Rules
+
+- Never define components inside other components — they remount every render.
+- Avoid inline object/array literals as props in hot paths — they break `React.memo`.
+- Use stable, unique keys (database IDs). Never array indices for dynamic lists. Never `Math.random()`.
+
+### Concurrent Features
+
+- **Automatic batching** (React 18+): all state updates batch into one re-render regardless of context (promises, setTimeout, events). Opt out with `flushSync` only when you need synchronous intermediate DOM reads.
+- **`useTransition`**: marks updates as non-urgent. React can interrupt and restart transition renders. Key UX win: transitions keep showing stale content instead of flashing loading fallbacks.
+- **`useDeferredValue`**: returns a value that "lags behind" during transitions. Unlike debounce/throttle, adapts to device speed — no arbitrary timeouts. Use when you receive a value you can't control (props).
+- **Suspense**: declaratively handles async loading. Combined with transitions, provides native stale-while-revalidate.
+
+### Bundle & Lists
+
+- Import specific modules: `import { debounce } from 'lodash-es/debounce'`.
 - Code-split at route boundaries with `React.lazy` + `Suspense`.
-- Avoid large barrel files (index.ts re-exporting everything). Use direct imports or small barrels (~5 exports max).
+- Virtualize lists with 100+ items (TanStack Virtual or react-window).
 
-### Lists
+### Images & Core Web Vitals
 
-- Virtualize lists with 100+ items using TanStack Virtual or react-window.
-- Combine infinite scroll with virtualization to prevent memory issues.
-
-### Images
-
-- Always specify `width` and `height` to prevent CLS.
-- Use native `loading="lazy"` for below-the-fold images.
-- Use `<picture>` with AVIF/WebP sources for modern format support.
-- In Next.js, use `next/image` with the `sizes` attribute.
-
-### Core Web Vitals
-
-- **LCP**: Preload critical images and fonts. Use SSR or Server Components. Inline critical CSS.
-- **INP**: Use `useTransition` for heavy updates. Reduce client-side JS with Server Components. Debounce/throttle expensive event handlers.
-- **CLS**: Always specify image dimensions. Reserve space for dynamic content.
+- Always specify `width` and `height` to prevent CLS. Use `loading="lazy"` for below-the-fold images.
+- **LCP**: Preload critical images/fonts. Use SSR or Server Components.
+- **INP**: Use `useTransition` for heavy updates. Reduce client JS with Server Components.
+- **CLS**: Reserve space for dynamic content. Specify image dimensions.
 
 ---
 
-## 6. Data Fetching
+## 7. Data Fetching
 
 ### Client-Side
 
-- Use TanStack Query for all API state. It handles caching, background refetching, loading/error states, and optimistic updates.
-- Set `staleTime` and `gcTime` based on data freshness requirements.
+- Use TanStack Query for all API state: caching, background refetching, loading/error states, optimistic updates.
 - Use `queryKey` arrays that include all parameters affecting the query.
 - For mutations, use `useMutation` with `onSuccess` that calls `invalidateQueries`.
 
 ### Server-Side (React 19+ / Next.js)
 
 - Server Components fetch data directly with `async/await` — zero client JS.
-- Use Server Actions (`'use server'`) for data mutations instead of API routes.
-- Use `useActionState` for form state management with server actions.
-- Use `useOptimistic` for immediate UI feedback during mutations.
-- Use `useFormStatus` for submit button loading states.
+- Use Server Actions (`'use server'`) for mutations. Use `useActionState` for form state, `useOptimistic` for immediate UI feedback, `useFormStatus` for submit button loading.
 
 ### Loading & Error States
 
-- Wrap async components in `<Suspense fallback={...}>` for loading states.
-- Wrap in `<ErrorBoundary>` to catch render errors.
-- Use granular Suspense boundaries — don't wrap the entire app in one.
+- Wrap async components in `<Suspense fallback={...}>`. Use granular boundaries.
+- Wrap in `<ErrorBoundary>` to catch render errors. Use `react-error-boundary` library.
 
 ---
 
-## 7. Forms
+## 8. Forms
 
 ### Simple Forms
 
-- React 19: Use native `<form action={serverAction}>` + `useActionState` + `useFormStatus`.
-- For client-only simple forms, controlled inputs with `useState` are fine.
+- React 19: `<form action={serverAction}>` + `useActionState` + `useFormStatus`.
+- Client-only simple forms: controlled inputs with `useState`.
 
 ### Complex Forms
 
-- Use React Hook Form + Zod for client-side forms with complex validation.
-- Define schemas with Zod, infer TypeScript types with `z.infer<typeof schema>`.
-- Use `zodResolver` to connect Zod schemas to React Hook Form.
+- React Hook Form + Zod for client-side forms with complex validation.
 
 ```typescript
 const schema = z.object({
@@ -264,78 +344,75 @@ const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
 
 ---
 
-## 8. Accessibility
+## 9. Accessibility
 
 ### Semantic HTML First
 
-- Use `<button>`, `<a>`, `<nav>`, `<main>`, `<article>`, `<section>`, `<header>`, `<footer>` — not generic `<div>` and `<span>` with roles.
-- Every `<img>` must have an `alt` attribute. Decorative images use `alt=""`.
+- Use `<button>`, `<a>`, `<nav>`, `<main>`, `<article>`, `<section>` — not `<div>` with roles.
+- Every `<img>` must have `alt`. Decorative images use `alt=""`.
 - Every form input must have an associated `<label>`.
 
-### Keyboard Navigation
+### Keyboard & Focus
 
 - All interactive elements must be keyboard-accessible (Tab, Enter, Space, Escape, Arrow keys).
-- Never remove `:focus` outlines without providing a visible alternative. Prefer `:focus-visible`.
-- Implement focus traps for modals and dialogs.
-- Move focus to the dialog when it opens; return focus to the trigger when it closes.
+- Never remove `:focus` outlines without a visible alternative. Prefer `:focus-visible`.
+- Implement focus traps for modals. Move focus to dialog on open; return on close.
 
 ### ARIA
 
-- Prefer semantic HTML over ARIA. Only use ARIA when semantic elements can't express the meaning.
-- Use `aria-label` for elements without visible text labels.
-- Use `aria-live="polite"` for dynamic content changes that screen readers should announce.
-- Use `aria-hidden="true"` on decorative elements.
-- Provide skip links (`<a href="#main-content" class="sr-only">Skip to main content</a>`).
+- Prefer semantic HTML over ARIA. Use `aria-label` for elements without visible text.
+- Use `aria-live="polite"` for dynamic content changes. Use `aria-hidden="true"` on decorative elements.
+- Provide skip links for main content.
 
 ### Testing
 
-- Use `eslint-plugin-jsx-a11y` for static analysis.
-- Use `jest-axe` for automated accessibility checks in tests.
-- Query elements by role first in tests: `screen.getByRole('button', { name: /submit/i })`.
+- Use `eslint-plugin-jsx-a11y` and `jest-axe`. Query by role first in tests.
 
 ---
 
-## 9. Testing
-
-### Philosophy
+## 10. Testing
 
 "The more your tests resemble the way your software is used, the more confidence they give you."
 
 ### Query Priority
 
-1. `getByRole` (preferred default)
-2. `getByLabelText` (form inputs)
-3. `getByPlaceholderText`
-4. `getByText` (non-interactive)
-5. `getByTestId` (last resort)
+1. `getByRole` → 2. `getByLabelText` → 3. `getByPlaceholderText` → 4. `getByText` → 5. `getByTestId` (last resort)
 
 ### Patterns
 
-- Use `@testing-library/user-event` over `fireEvent` for realistic user interactions.
-- Use `findBy*` (async) for elements that appear after state changes.
+- Use `@testing-library/user-event` over `fireEvent`.
+- Use `findBy*` (async) for elements appearing after state changes.
 - Test behavior, not implementation. Don't assert on internal state or DOM structure.
-- Favor integration tests over unit tests — test components with their hooks and API interactions.
-- Use MSW (Mock Service Worker) for API mocking.
-- Follow Arrange-Act-Assert structure.
+- Prefer integration tests. Use MSW for API mocking. Follow Arrange-Act-Assert.
 
 ---
 
-## 10. Security
+## 11. Security
 
-- React escapes JSX expressions by default — this prevents most XSS.
-- Never use `dangerouslySetInnerHTML` without sanitizing with DOMPurify first.
-- Validate URLs before using in `href` — reject `javascript:` protocol. Only allow `http:` and `https:`.
-- Don't store sensitive data (passwords, tokens) in React state. Use refs for temporary values, clear after use.
-- Implement CSP headers to restrict script sources.
+- React escapes JSX by default. Never use `dangerouslySetInnerHTML` without DOMPurify.
+- Validate URLs in `href` — reject `javascript:` protocol. Only allow `http:` and `https:`.
+- Don't store sensitive data in React state. Implement CSP headers.
 
 ---
 
-## 11. Code Quality Checklist
+## 12. Legacy Patterns to Avoid
+
+- **Class components**: Only for error boundaries (no hook equivalent for `componentDidCatch`). Use `react-error-boundary` to avoid even that.
+- **PropTypes**: Silently ignored in React 19 — use TypeScript.
+- **`defaultProps` on function components**: Removed in React 19 — use ES6 default parameters.
+- **Legacy Context API** (`contextType`, `Consumer`): Removed in React 19.
+- **HOCs / render props for logic reuse**: Superseded by custom hooks. Render props remain valid for headless UI patterns.
+
+---
+
+## 13. Code Quality Checklist
 
 When writing or reviewing React + TypeScript code, verify:
 
 - [ ] No `any` types. No unnecessary `as` casts.
 - [ ] No useEffect for derived state, event handling, or data fetching.
+- [ ] State is colocated — not lifted higher than necessary.
+- [ ] Derived values computed during render, not synced via useEffect.
 - [ ] No inline object/array literals as props in hot paths.
 - [ ] No array index keys on dynamic lists.
 - [ ] No component definitions inside other components.
@@ -349,9 +426,7 @@ When writing or reviewing React + TypeScript code, verify:
 
 ---
 
-## 12. File Structure (Feature-Based)
-
-For medium-to-large projects:
+## 14. File Structure (Feature-Based)
 
 ```
 src/

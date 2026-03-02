@@ -11,24 +11,33 @@
         ]
       }
     ],
-    "PreToolUse": [
+    "PostToolUse": [
       {
-        "matcher": "",
+        "matcher": "Write",
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"[Hook: PreToolUse] Tool: $(cat | jq -r '.tool_name // \"unknown\"')\""
+            "command": "bash scripts/auto-format.sh || exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/auto-format.sh || exit 0"
           }
         ]
       }
     ],
-    "PostToolUse": [
+    "PreToolUse": [
       {
-        "matcher": "",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"[Hook: PostToolUse] Tool: $(cat | jq -r '.tool_name // \"unknown\"')\""
+            "command": "bash scripts/git-guard.sh || exit 0"
           }
         ]
       }

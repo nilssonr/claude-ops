@@ -1,0 +1,1 @@
+allow-main-commits: true

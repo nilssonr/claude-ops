@@ -7,6 +7,7 @@ Skills, agents, and hooks for Claude Code.
 | Skill | Command | Description |
 |-------|---------|-------------|
 | react-typescript | `/react-typescript` | React + TypeScript best practices, performance, accessibility, architecture, and code quality |
+| storybook-components | `/storybook-components` | Storybook, shadcn/ui, Tailwind v4, CVA variants, compound components, and tweakcn |
 
 ## Installation
 

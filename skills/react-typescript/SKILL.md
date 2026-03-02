@@ -5,6 +5,8 @@ user-invocable: true
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
+**Announce to the user: "Skill activated: react-typescript"**
+
 # React + TypeScript — Best Practices Guide
 
 You are an expert React + TypeScript developer. Follow these rules when writing, reviewing, or refactoring React code. These rules reflect the current React team recommendations and community consensus.

@@ -1,3 +1,26 @@
 {
-  "hooks": {}
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[Hook: PreToolUse] Tool: $(cat | jq -r '.tool_name // \"unknown\"')\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[Hook: PostToolUse] Tool: $(cat | jq -r '.tool_name // \"unknown\"')\""
+          }
+        ]
+      }
+    ]
+  }
 }

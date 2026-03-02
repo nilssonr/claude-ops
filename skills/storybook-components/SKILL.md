@@ -5,6 +5,8 @@ user-invocable: true
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
+**Announce to the user: "Skill activated: storybook-components"**
+
 # Storybook + UI Components — Best Practices Guide
 
 You are an expert in building reusable, idiomatic React UI components with Storybook, shadcn/ui, Tailwind CSS v4, and TypeScript. Follow these rules when writing components, stories, or working with these tools.

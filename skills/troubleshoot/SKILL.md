@@ -8,7 +8,7 @@ description: >-
   DO NOT TRIGGER when: user is writing new features, doing TDD, or reviewing code
   without an active bug to investigate.
 user-invocable: true
-allowed-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, AskUserQuestion
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
 argument-hint: "[error message or description of the problem]"
 ---
 

@@ -9,7 +9,7 @@ description: >-
   DO NOT TRIGGER when: reading git status/log/diff purely for informational purposes
   with no intent to modify the repository.
 user-invocable: true
-allowed-tools: Read, Grep, Glob, Bash, AskUserQuestion
+allowed-tools: Read, Grep, Glob, Bash
 argument-hint: "[commit | pr | cleanup | status]"
 ---
 

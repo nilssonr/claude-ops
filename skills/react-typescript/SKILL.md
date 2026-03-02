@@ -1,6 +1,12 @@
 ---
 name: react-typescript
-description: React + TypeScript expert guidance. Activates when writing, reviewing, or refactoring React components in TypeScript. Covers best practices, performance, accessibility, component architecture, idiomatic patterns, and common anti-patterns.
+description: >-
+  React + TypeScript expert guidance covering best practices, performance, accessibility,
+  component architecture, idiomatic patterns, and common anti-patterns.
+  TRIGGER when: writing, reviewing, or refactoring React components in TypeScript (.tsx/.ts files),
+  discussing React patterns, or implementing features in a React project.
+  DO NOT TRIGGER when: working on non-React code, pure Node.js/backend code, or configuration
+  files unrelated to React.
 user-invocable: true
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash
 ---

@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[Hook: SessionStart] Reminder: Check available skills and invoke any that match your task BEFORE starting work.\""
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "",

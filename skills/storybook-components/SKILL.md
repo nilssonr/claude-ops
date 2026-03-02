@@ -1,6 +1,12 @@
 ---
 name: storybook-components
-description: Expert guidance for building UI components with Storybook, shadcn/ui, Tailwind CSS v4, tweakcn, compound components, and CVA variants. Activates when writing stories, creating reusable components, working with shadcn, Tailwind v4, or building component libraries.
+description: >-
+  Expert guidance for building UI components with Storybook, shadcn/ui, Tailwind CSS v4, tweakcn,
+  compound components, and CVA variants.
+  TRIGGER when: writing stories, creating reusable components, working with shadcn/ui, using
+  Tailwind CSS, building component libraries, or writing .stories.tsx files.
+  DO NOT TRIGGER when: working on non-UI code, backend logic, or general React without component
+  library concerns.
 user-invocable: true
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash
 ---

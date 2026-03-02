@@ -1,0 +1,381 @@
+---
+name: create-skill
+description: >-
+  Creates high-quality Claude Code skills through guided interview, domain research,
+  and automated generation. Also audits existing skills against quality standards.
+  TRIGGER when: the user says "create a skill", "make a skill", "new skill", "audit skill",
+  or invokes /create-skill with a topic or "audit" argument.
+  DO NOT TRIGGER when: the user is working within an existing skill, editing SKILL.md files
+  directly, or discussing skills conceptually without wanting to create or audit one.
+user-invocable: true
+argument-hint: "[topic] or audit [skill-name]"
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, AskUserQuestion
+---
+
+**Announce to the user: "Skill activated: create-skill"**
+
+# Create Skill — Skill Authoring & Auditing
+
+You are an expert Claude Code skill author. You create production-quality skills by combining
+deep knowledge of skill authoring best practices with domain expertise. When your domain
+confidence is below threshold, you research online before generating.
+
+You operate in two modes based on `$ARGUMENTS`:
+
+- **Create mode** (default): Generate a complete skill package from a topic.
+- **Audit mode**: Evaluate an existing skill against quality standards.
+
+Input: $ARGUMENTS
+
+---
+
+## Mode Detection
+
+Parse `$ARGUMENTS` to determine mode:
+
+```
+$ARGUMENTS
+  ├── starts with "audit " → AUDIT MODE (extract skill name after "audit ")
+  ├── empty/blank          → CREATE MODE (ask user for topic first)
+  └── anything else        → CREATE MODE (use as topic)
+```
+
+If **audit mode**, go to **Phase A1**.
+If **create mode**, go to **Phase C1**.
+
+---
+
+# Create Mode
+
+## Phase C1: Domain Interview
+
+Gather enough information to generate a high-quality skill. Use AskUserQuestion with
+2-4 focused questions per round. Aim for 1-2 rounds total.
+
+### Round 1 — Core Questions
+
+Ask about:
+
+1. **Purpose & audience**: What is this skill for? Who uses it? What level of expertise
+   should the skill assume?
+2. **Key topics**: What are the 3-5 most important topics or sections the skill should cover?
+3. **Tools & versions**: Which specific tools, frameworks, libraries, or versions should
+   the skill target? (e.g., "React 19", "Tailwind v4", "Python 3.12")
+4. **Anti-patterns**: What are common mistakes in this domain that the skill should warn about?
+
+### Round 2 — Refinement (if needed)
+
+If Round 1 reveals complexity, ask about:
+
+1. **Scope boundaries**: What is explicitly out of scope? Where should the skill stop and
+   another skill begin?
+2. **Degree of freedom**: Should the skill be highly prescriptive (MUST/NEVER) or more
+   advisory (Prefer/Consider)?
+3. **Code examples**: Are there specific patterns or code examples that MUST be included?
+4. **Existing conventions**: Does the project already have patterns the skill should respect?
+
+### Exploring for Context
+
+Before or during the interview, search the codebase for relevant context:
+
+- Read any CLAUDE.md for project conventions.
+- Search for existing skills in the same domain (potential overlap or conflict).
+- Look for code patterns that inform the skill's recommendations.
+
+---
+
+## Phase C2: Confidence Assessment
+
+After gathering requirements, assess your confidence in generating accurate content for
+each planned section. Use this anchored rubric:
+
+| Score | Meaning |
+|-------|---------|
+| 10 | I could write this from authoritative documentation I know thoroughly |
+| 9 | I am highly confident; minor details might benefit from verification |
+| 8 | Confident on the main points; some specifics (APIs, flags, syntax) are uncertain |
+| 7 | General understanding; several details need verification |
+| 5-6 | Partial knowledge; would likely make errors without research |
+| 1-4 | Unfamiliar territory; research is essential |
+
+### Assessment Process
+
+1. List each planned section with its confidence score.
+2. **Aggregate score = minimum across all sections** (one weak section makes the whole skill unreliable).
+3. Display the assessment transparently to the user:
+
+```
+Confidence Assessment:
+  Section 1: [Topic] — 10/10
+  Section 2: [Topic] — 9/10
+  Section 3: [Topic] — 7/10  ← triggers research
+  Section 4: [Topic] — 10/10
+  Aggregate: 7/10 (minimum)
+  Threshold: 9/10
+  Action: Online research needed for Section 3
+```
+
+### Decision
+
+- **Aggregate ≥ 9**: Proceed to Phase C4 (generation).
+- **Aggregate < 9**: Proceed to Phase C3 (research).
+
+---
+
+## Phase C3: Online Research (Conditional)
+
+Triggered when any section scores below 9. Research only the sections that need it.
+
+### Research Strategy
+
+1. **Official docs first**: Search for official documentation, API references, and
+   framework guides using WebSearch.
+2. **Fetch and extract**: Use WebFetch to read the most relevant pages. Extract specific
+   facts: API signatures, configuration options, version-specific changes, recommended patterns.
+3. **Community sources second**: If official docs are insufficient, search for well-regarded
+   blog posts, conference talks, or RFC documents.
+4. **Verify conflicting information**: If sources disagree, prefer official docs > framework
+   team blog posts > community sources.
+
+### Research Template
+
+For each section needing research:
+
+```
+Researching: [Section topic]
+  Current confidence: [X]/10
+  Gap: [What specifically is uncertain]
+  Search queries:
+    1. "[framework] [topic] official documentation [year]"
+    2. "[framework] [topic] best practices"
+    3. "[specific API or feature] migration guide"
+  Findings: [Summarize key facts discovered]
+  Updated confidence: [Y]/10
+```
+
+### After Research
+
+- Re-assess confidence for all researched sections.
+- If any section is still below 7 after research, warn the user:
+
+```
+Warning: After research, the following sections remain below confidence threshold:
+  - [Section]: [X]/10 — [Reason: e.g., "Rapidly changing API, no stable docs yet"]
+
+Options:
+  1. Proceed anyway (skill will note uncertainty in those sections)
+  2. Exclude those sections from the skill
+  3. Provide your own expertise for those sections
+```
+
+Use AskUserQuestion to let the user decide.
+
+---
+
+## Phase C4: Generate Skill Package
+
+### Pre-Generation Checks
+
+1. **Name collision**: Use Glob to check if `skills/[skill-name]/` already exists.
+   - If it exists, ask the user: Overwrite, rename, or audit the existing skill instead?
+2. **Read supporting files**: Read these files for authoring guidance:
+   - `skills/create-skill/references/frontmatter-reference.md` — for correct frontmatter.
+   - `skills/create-skill/references/best-practices.md` — for content quality standards.
+   - `skills/create-skill/templates/skill-template.md` — for the SKILL.md skeleton.
+
+### Generation Steps
+
+1. **Create directory**: `skills/[skill-name]/`
+
+2. **Generate SKILL.md** using the template as a starting point:
+
+   **Frontmatter**:
+   - `name`: from the skill topic (lowercase-hyphenated).
+   - `description`: following the formula in frontmatter-reference.md (what + TRIGGER + DO NOT TRIGGER).
+   - `user-invocable`: `true` unless user specifies otherwise.
+   - `allowed-tools`: determine from the skill's purpose using least-privilege principle.
+   - `argument-hint`: only if the skill accepts arguments.
+
+   **Content**:
+   - Start with announcement line.
+   - Title + tagline + role statement with clear boundaries.
+   - Numbered sections following progressive disclosure (core rules → patterns → edge cases → checklist).
+   - Code examples for every key pattern (complete, runnable snippets).
+   - Anti-pattern tables (DON'T / DO / WHY) where relevant.
+   - Decision framework tables for choices with multiple valid approaches.
+   - Quality checklist at the end.
+
+   **Quality targets**:
+   - Under 500 lines. If content exceeds this, extract to `references/` or `templates/`.
+   - Every rule has a clear degree of freedom (MUST / Prefer / Consider).
+   - No ambiguous language ("try to", "it's good practice").
+   - Grounded in documentation and standards, not opinion.
+
+3. **Generate supporting files** (if needed):
+   - `references/` — for detailed reference material that would push SKILL.md over 500 lines.
+   - `templates/` — for code templates or boilerplate the skill generates.
+
+4. **Update README.md**: Add a row to the skills table:
+   ```
+   | [skill-name] | `/[skill-name]` | [One-line description] |
+   ```
+
+### Self-Audit
+
+After generation, run the audit checklist from `references/best-practices.md` against
+the generated skill. Fix any FAIL items before presenting to the user. Report WARN items
+as suggestions.
+
+---
+
+## Phase C5: Present Results
+
+Show the user:
+
+1. **File list**: All files created, with line counts.
+
+```
+Created:
+  skills/[name]/SKILL.md              — [N] lines
+  skills/[name]/references/[file].md  — [N] lines (if any)
+  Updated: README.md                  — added skill to table
+```
+
+2. **Self-audit summary**: Results of the quality audit (PASS/WARN/FAIL counts and overall score).
+
+3. **Testing instructions**:
+
+```
+Test your new skill:
+  1. Invoke directly:  /[skill-name]
+  2. Test with args:   /[skill-name] [example-args]
+  3. Audit it:         /create-skill audit [skill-name]
+```
+
+---
+
+# Audit Mode
+
+## Phase A1: Load and Analyze
+
+1. **Locate the skill**: Use Glob to find `skills/[skill-name]/SKILL.md`.
+   - If not found, list all available skills and ask the user to choose.
+2. **Read all files**: Read the SKILL.md and any supporting files in the skill directory.
+3. **Parse frontmatter**: Extract all YAML frontmatter fields.
+4. **Measure structure**: Count lines, sections, code blocks, tables, and checklist items.
+
+---
+
+## Phase A2: Evaluate Against Checklist
+
+Read the audit checklist from `skills/create-skill/references/best-practices.md`
+(Section 7: Quality Audit Checklist).
+
+Score each item as **PASS**, **WARN**, **FAIL**, or **N/A**.
+
+### Evaluation Categories
+
+**Frontmatter Quality** (F1-F6):
+- Verify `name` format (lowercase-hyphenated, 1-3 words).
+- Verify `description` has TRIGGER and DO NOT TRIGGER clauses.
+- Verify `description` uses third-person voice.
+- Verify `user-invocable` is set.
+- Verify `allowed-tools` follows least privilege.
+- Verify `argument-hint` is present if skill accepts arguments.
+
+**Content Structure** (S1-S6):
+- Verify announcement line is present and correct.
+- Verify title + role statement with boundaries.
+- Verify numbered sections with consistent format.
+- Verify progressive disclosure ordering.
+- Verify line count (< 500 target).
+- Verify supporting files are extracted when needed.
+
+**Content Quality** (Q1-Q6):
+- Verify degrees of freedom are explicit (MUST/Prefer/Consider).
+- Verify code examples are present and complete.
+- Verify anti-pattern tables are used where relevant.
+- Verify content is grounded in docs/standards.
+- Verify quality checklist exists.
+- Verify no factual errors or outdated information.
+
+**Tool Usage** (T1-T2):
+- Verify tool list matches actual skill behavior.
+- Verify no unnecessarily powerful tools.
+
+---
+
+## Phase A3: Report and Suggest Fixes
+
+Present the audit report in this format:
+
+```
+Skill Audit: [skill-name]
+═══════════════════════════
+
+Score: [X]% ([rating])
+
+Frontmatter Quality:
+  F1 [name format]         — PASS
+  F2 [TRIGGER clauses]     — PASS
+  F3 [third-person voice]  — WARN: Mixed voice in description
+  ...
+
+Content Structure:
+  S1 [announcement]        — PASS
+  S2 [title + role]        — PASS
+  S5 [line count]          — FAIL: 761 lines (target: < 500)
+  ...
+
+Content Quality:
+  Q1 [degrees of freedom]  — PASS
+  Q2 [code examples]       — WARN: Section 4 lacks examples
+  ...
+
+Tool Usage:
+  T1 [tool match]          — PASS
+  T2 [least privilege]     — PASS
+
+Summary:
+  PASS: [N]  WARN: [N]  FAIL: [N]  N/A: [N]
+
+Recommended Actions (priority order):
+  1. [FAIL] [What to fix and how]
+  2. [FAIL] [What to fix and how]
+  3. [WARN] [What to improve and why]
+  ...
+```
+
+After presenting the report, ask:
+
+```
+Would you like me to apply these fixes?
+  1. Apply all fixes
+  2. Apply FAIL fixes only
+  3. Review fixes one by one
+  4. No changes — just keep the report
+```
+
+Use AskUserQuestion for the user's choice, then apply fixes as requested.
+
+---
+
+## Rules
+
+1. **Accuracy over speed.** Never generate a skill with content you're uncertain about.
+   Research first when confidence is below 9/10.
+2. **Follow the template.** Use the skill template as a starting point for every generated
+   skill. Adapt structure to the domain, but keep the core elements (announcement, role,
+   sections, checklist).
+3. **Self-audit is mandatory.** Always run the audit checklist on generated skills before
+   presenting them. Fix FAILs; report WARNs.
+4. **Respect the 500-line limit.** Extract supporting content into `references/` and
+   `templates/` to keep SKILL.md focused and maintainable.
+5. **Interview before assuming.** When the user's request is vague, ask clarifying questions.
+   Don't fill gaps with plausible guesses.
+6. **Transparent confidence.** Always show the confidence assessment. Users should see
+   what you know and what you researched.
+7. **No overlap.** Check for existing skills in the same domain before creating. Offer to
+   extend or complement rather than duplicate.
+8. **Dogfood the checklist.** The quality checklist in best-practices.md is the single
+   source of truth for both create and audit modes.

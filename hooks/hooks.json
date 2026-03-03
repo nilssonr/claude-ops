@@ -40,6 +40,15 @@
             "command": "bash scripts/git-guard.sh || exit 0"
           }
         ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/plan-to-implement.sh"
+          }
+        ]
       }
     ]
   }

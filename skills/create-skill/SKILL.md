@@ -9,7 +9,7 @@ description: >-
   directly, or discussing skills conceptually without wanting to create or audit one.
 user-invocable: true
 argument-hint: "[topic] or audit [skill-name]"
-allowed-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, AskUserQuestion
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch
 ---
 
 **Announce to the user: "Skill activated: create-skill"**
@@ -89,14 +89,14 @@ Before or during the interview, search the codebase for relevant context:
 After gathering requirements, assess your confidence in generating accurate content for
 each planned section. Use this anchored rubric:
 
-| Score | Meaning |
-|-------|---------|
-| 10 | I could write this from authoritative documentation I know thoroughly |
-| 9 | I am highly confident; minor details might benefit from verification |
-| 8 | Confident on the main points; some specifics (APIs, flags, syntax) are uncertain |
-| 7 | General understanding; several details need verification |
-| 5-6 | Partial knowledge; would likely make errors without research |
-| 1-4 | Unfamiliar territory; research is essential |
+| Score | Meaning                                                                          |
+| ----- | -------------------------------------------------------------------------------- |
+| 10    | I could write this from authoritative documentation I know thoroughly            |
+| 9     | I am highly confident; minor details might benefit from verification             |
+| 8     | Confident on the main points; some specifics (APIs, flags, syntax) are uncertain |
+| 7     | General understanding; several details need verification                         |
+| 5-6   | Partial knowledge; would likely make errors without research                     |
+| 1-4   | Unfamiliar territory; research is essential                                      |
 
 ### Assessment Process
 
@@ -172,85 +172,29 @@ Use AskUserQuestion to let the user decide.
 
 ---
 
-## Phase C4: Generate Skill Package
+## Phase C4: Delegate to skill-generator Agent
 
-### Pre-Generation Checks
+Generation is handled by the `skill-generator` agent. Delegate the work now.
+
+### Pre-Delegation Check
 
 1. **Name collision**: Use Glob to check if `skills/[skill-name]/` already exists.
    - If it exists, ask the user: Overwrite, rename, or audit the existing skill instead?
-2. **Read supporting files**: Read these files for authoring guidance:
-   - `skills/create-skill/references/frontmatter-reference.md` — for correct frontmatter.
-   - `skills/create-skill/references/best-practices.md` — for content quality standards.
-   - `skills/create-skill/templates/skill-template.md` — for the SKILL.md skeleton.
 
-### Generation Steps
+### Delegate
 
-1. **Create directory**: `skills/[skill-name]/`
-
-2. **Generate SKILL.md** using the template as a starting point:
-
-   **Frontmatter**:
-   - `name`: from the skill topic (lowercase-hyphenated).
-   - `description`: following the formula in frontmatter-reference.md (what + TRIGGER + DO NOT TRIGGER).
-   - `user-invocable`: `true` unless user specifies otherwise.
-   - `allowed-tools`: determine from the skill's purpose using least-privilege principle.
-   - `argument-hint`: only if the skill accepts arguments.
-
-   **Content**:
-   - Start with announcement line.
-   - Title + tagline + role statement with clear boundaries.
-   - Numbered sections following progressive disclosure (core rules → patterns → edge cases → checklist).
-   - Code examples for every key pattern (complete, runnable snippets).
-   - Anti-pattern tables (DON'T / DO / WHY) where relevant.
-   - Decision framework tables for choices with multiple valid approaches.
-   - Quality checklist at the end.
-
-   **Quality targets**:
-   - Under 500 lines. If content exceeds this, extract to `references/` or `templates/`.
-   - Every rule has a clear degree of freedom (MUST / Prefer / Consider).
-   - No ambiguous language ("try to", "it's good practice").
-   - Grounded in documentation and standards, not opinion.
-
-3. **Generate supporting files** (if needed):
-   - `references/` — for detailed reference material that would push SKILL.md over 500 lines.
-   - `templates/` — for code templates or boilerplate the skill generates.
-
-4. **Update README.md**: Add a row to the skills table:
-   ```
-   | [skill-name] | `/[skill-name]` | [One-line description] |
-   ```
-
-### Self-Audit
-
-After generation, run the audit checklist from `references/best-practices.md` against
-the generated skill. Fix any FAIL items before presenting to the user. Report WARN items
-as suggestions.
-
----
-
-## Phase C5: Present Results
-
-Show the user:
-
-1. **File list**: All files created, with line counts.
+Spawn the `skill-generator` agent with this context:
 
 ```
-Created:
-  skills/[name]/SKILL.md              — [N] lines
-  skills/[name]/references/[file].md  — [N] lines (if any)
-  Updated: README.md                  — added skill to table
+Skill name: [name from interview]
+Description: [from interview answers]
+Interview answers: [summarize all C1 answers]
+Confidence assessment: [from C2]
+Research findings: [from C3, if applicable]
 ```
 
-2. **Self-audit summary**: Results of the quality audit (PASS/WARN/FAIL counts and overall score).
-
-3. **Testing instructions**:
-
-```
-Test your new skill:
-  1. Invoke directly:  /[skill-name]
-  2. Test with args:   /[skill-name] [example-args]
-  3. Audit it:         /create-skill audit [skill-name]
-```
+The agent handles: file generation, self-audit, quality checks, and README update.
+Wait for the agent to return results, then present them to the user.
 
 ---
 
@@ -276,6 +220,7 @@ Score each item as **PASS**, **WARN**, **FAIL**, or **N/A**.
 ### Evaluation Categories
 
 **Frontmatter Quality** (F1-F6):
+
 - Verify `name` format (lowercase-hyphenated, 1-3 words).
 - Verify `description` has TRIGGER and DO NOT TRIGGER clauses.
 - Verify `description` uses third-person voice.
@@ -284,6 +229,7 @@ Score each item as **PASS**, **WARN**, **FAIL**, or **N/A**.
 - Verify `argument-hint` is present if skill accepts arguments.
 
 **Content Structure** (S1-S6):
+
 - Verify announcement line is present and correct.
 - Verify title + role statement with boundaries.
 - Verify numbered sections with consistent format.
@@ -292,6 +238,7 @@ Score each item as **PASS**, **WARN**, **FAIL**, or **N/A**.
 - Verify supporting files are extracted when needed.
 
 **Content Quality** (Q1-Q6):
+
 - Verify degrees of freedom are explicit (MUST/Prefer/Consider).
 - Verify code examples are present and complete.
 - Verify anti-pattern tables are used where relevant.
@@ -300,6 +247,7 @@ Score each item as **PASS**, **WARN**, **FAIL**, or **N/A**.
 - Verify no factual errors or outdated information.
 
 **Tool Usage** (T1-T2):
+
 - Verify tool list matches actual skill behavior.
 - Verify no unnecessarily powerful tools.
 

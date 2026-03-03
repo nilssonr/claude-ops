@@ -11,17 +11,27 @@ Skills, agents, and hooks for Claude Code.
 | create-skill         | `/create-skill`         | Create and audit Claude Code skills with guided interview, domain research, and quality validation                         |
 | git                  | `/git`                  | Git workflow enforcement: conventional commits, worktrees, logical commit splitting, PR creation, branch protection        |
 | react-typescript     | `/react-typescript`     | React + TypeScript best practices, performance, accessibility, architecture, and code quality                              |
-| review               | `/review`               | Structured code review: 11-dimension framework, confidence scoring, severity classification                                |
 | storybook-components | `/storybook-components` | Storybook, shadcn/ui, Tailwind v4, CVA variants, compound components, and tweakcn                                          |
 | tdd                  | `/tdd`                  | Test-driven development: testability assessment, RED-GREEN-REFACTOR, anti-pattern enforcement                              |
 | troubleshoot         | `/troubleshoot`         | Hypothesis-driven debugging: phased investigation, 2-strike escalation, root cause analysis                                |
+| review               | `/review`               | Code review orchestrator: splits diffs by domain, spawns parallel reviewers, consolidates findings                         |
+
+## Agents
+
+| Agent             | Description                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| code-reviewer     | Self-contained code review: 11-dimension framework, confidence scoring, severity reports       |
+| skill-generator   | Generates skill packages from interview results — delegated by create-skill                    |
+| component-builder | Builds UI components from an established design system — delegated by interface-design         |
+| developer         | Implements plan steps with TDD + git — spawned by post-plan orchestrator in isolated worktrees |
 
 ## Hooks
 
-| Hook        | Type                      | Description                                                  |
-| ----------- | ------------------------- | ------------------------------------------------------------ |
-| git-guard   | PreToolUse (Bash)         | Enforces /git skill for git write operations and gh commands |
-| auto-format | PostToolUse (Write, Edit) | Runs appropriate formatter after file modifications          |
+| Hook              | Type                      | Description                                                  |
+| ----------------- | ------------------------- | ------------------------------------------------------------ |
+| git-guard         | PreToolUse (Bash)         | Enforces /git skill for git write operations and gh commands |
+| auto-format       | PostToolUse (Write, Edit) | Runs appropriate formatter after file modifications          |
+| plan-to-implement | PreToolUse (ExitPlanMode) | Injects orchestration constraints for post-plan execution    |
 
 ## Interface Design
 
@@ -61,6 +71,28 @@ The `interface-design` skill pushes Claude past generic UI output by forcing dom
 ```
 
 The skill also triggers automatically when you ask Claude to build dashboards, admin panels, or app interfaces.
+
+## Plan Implementation
+
+When a plan is approved via ExitPlanMode, the `plan-to-implement` hook automatically injects orchestration constraints into the session. The main session spawns a single `general-purpose` orchestrator agent that reads the plan, identifies parallelizable work, and delegates to `developer` agents in isolated worktrees.
+
+### Flow
+
+```
+brainstorm → plan mode → plan file → approve → hook injects constraints
+  → orchestrator agent spawns → reads plan → spawns developer agents → merge
+```
+
+### How it works
+
+1. **Hook injection** — The `plan-to-implement` hook fires on ExitPlanMode and injects the plan file path plus orchestration constraints into the session context.
+2. **Orchestrator spawn** — The main session spawns a single `general-purpose` agent with the plan file path and constraints. This keeps orchestration noise out of the main context window.
+3. **Parallel execution** — The orchestrator reads the plan, uses its own judgment to identify parallel vs sequential work, and spawns `claude-ops:developer` agents with `isolation: "worktree"` for each work stream.
+4. **Merge** — After all agents finish, worktree branches are merged back with `--no-ff`. Conflicts are reported, never auto-resolved.
+
+### Plan format
+
+No rigid format is required. The orchestrator reads any plan and judges parallelization itself. Write plans naturally — describe what needs to happen, note dependencies where they exist, and let the orchestrator figure out the execution order.
 
 ## Installation
 

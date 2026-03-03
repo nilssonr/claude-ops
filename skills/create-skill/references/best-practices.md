@@ -23,12 +23,12 @@ The `description` field is the most important field for automatic skill activati
 
 Good trigger terms are concrete and observable:
 
-| Strong Triggers | Weak Triggers |
-|----------------|---------------|
-| `.tsx` files, `import React` | "React project" |
-| `user says "brainstorm"` | "user wants help" |
-| `writing stories`, `.stories.tsx` | "component work" |
-| `Storybook`, `shadcn/ui` | "UI library" |
+| Strong Triggers                   | Weak Triggers     |
+| --------------------------------- | ----------------- |
+| `.tsx` files, `import React`      | "React project"   |
+| `user says "brainstorm"`          | "user wants help" |
+| `writing stories`, `.stories.tsx` | "component work"  |
+| `Storybook`, `shadcn/ui`          | "UI library"      |
 
 ### Anti-Patterns
 
@@ -90,11 +90,11 @@ This ensures Claude hits the most important content first, even if context is li
 
 Every rule should have a clear **degree of freedom** — how much latitude Claude has:
 
-| Marker | Meaning | Example |
-|--------|---------|---------|
-| **MUST** / **Always** / **Never** | No flexibility — hard rule | "Never use `any` types" |
-| **Prefer** / **Default to** | Use unless there's a clear reason not to | "Prefer composition over inheritance" |
-| **Consider** / **When practical** | Optional, context-dependent | "Consider virtualization for 100+ items" |
+| Marker                            | Meaning                                  | Example                                  |
+| --------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| **MUST** / **Always** / **Never** | No flexibility — hard rule               | "Never use `any` types"                  |
+| **Prefer** / **Default to**       | Use unless there's a clear reason not to | "Prefer composition over inheritance"    |
+| **Consider** / **When practical** | Optional, context-dependent              | "Consider virtualization for 100+ items" |
 
 Avoid ambiguous language like "try to" or "it's good practice to" — be prescriptive.
 
@@ -118,10 +118,10 @@ type Result = { ok?: boolean; data?: User; error?: string };
 Use tables to contrast good and bad patterns. This is one of the most effective teaching formats:
 
 ```markdown
-| Don't do this | Do this instead | Why |
-|---------------|----------------|-----|
-| `useEffect` for derived state | Compute during render | Avoids extra render cycle |
-| Array index keys on dynamic lists | Stable unique IDs | Prevents reorder bugs |
+| Don't do this                     | Do this instead       | Why                       |
+| --------------------------------- | --------------------- | ------------------------- |
+| `useEffect` for derived state     | Compute during render | Avoids extra render cycle |
+| Array index keys on dynamic lists | Stable unique IDs     | Prevents reorder bugs     |
 ```
 
 ### Grounded, Not Opinionated
@@ -138,20 +138,19 @@ Use tables to contrast good and bad patterns. This is one of the most effective 
 
 Only request tools the skill actually needs. Common patterns:
 
-| Skill Type | Typical Tools |
-|-----------|---------------|
-| Knowledge/guidance (like react-typescript) | `Read, Grep, Glob, Edit, Write, Bash` |
-| Interview/planning (like brainstorm) | `Read, Grep, Glob, Bash, WebSearch, WebFetch, AskUserQuestion, EnterPlanMode` |
-| Code generation (like create-skill) | `Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, AskUserQuestion` |
-| Audit/analysis | `Read, Grep, Glob` |
+| Skill Type                                 | Typical Tools                                              |
+| ------------------------------------------ | ---------------------------------------------------------- |
+| Knowledge/guidance (like react-typescript) | `Read, Grep, Glob, Edit, Write, Bash`                      |
+| Interview/planning (like brainstorm)       | `Read, Grep, Glob, Bash, WebSearch, WebFetch`              |
+| Code generation (like create-skill)        | `Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch` |
+| Audit/analysis                             | `Read, Grep, Glob`                                         |
 
 ### Tool Scoping Tips
 
 - `WebSearch` + `WebFetch` — only if the skill needs to research external information.
-- `AskUserQuestion` — only if the skill has an interactive interview or decision phase.
-- `EnterPlanMode` — only if the skill transitions to plan mode as a final step.
 - `Edit` + `Write` — only if the skill creates or modifies files.
 - `Bash` — only if the skill needs to run shell commands (tests, builds, etc.).
+- **NEVER include `AskUserQuestion` or `EnterPlanMode` in `allowed-tools`.** These are interactive/UI tools that are always available. Listing them in `allowed-tools` causes auto-approval, which skips user interaction and returns empty results.
 
 ---
 
@@ -220,43 +219,44 @@ Use this checklist to evaluate any skill. Each item scores PASS, WARN, or FAIL.
 
 ### Frontmatter Quality
 
-| # | Check | PASS | WARN | FAIL |
-|---|-------|------|------|------|
-| F1 | `name` is lowercase-hyphenated, 1-3 words | Correct format | Slightly long | Missing or wrong format |
-| F2 | `description` has TRIGGER and DO NOT TRIGGER | Both present and specific | Present but vague | Missing one or both |
-| F3 | `description` uses third-person voice | Consistent | Mixed voice | First-person throughout |
-| F4 | `user-invocable` is set | Present | — | Missing |
-| F5 | `allowed-tools` follows least privilege | Only needed tools | 1-2 unnecessary tools | All tools or missing |
-| F6 | `argument-hint` present (if skill takes args) | Clear hint with placeholders | Vague hint | Missing when needed |
+| #   | Check                                         | PASS                         | WARN                  | FAIL                    |
+| --- | --------------------------------------------- | ---------------------------- | --------------------- | ----------------------- |
+| F1  | `name` is lowercase-hyphenated, 1-3 words     | Correct format               | Slightly long         | Missing or wrong format |
+| F2  | `description` has TRIGGER and DO NOT TRIGGER  | Both present and specific    | Present but vague     | Missing one or both     |
+| F3  | `description` uses third-person voice         | Consistent                   | Mixed voice           | First-person throughout |
+| F4  | `user-invocable` is set                       | Present                      | —                     | Missing                 |
+| F5  | `allowed-tools` follows least privilege       | Only needed tools            | 1-2 unnecessary tools | All tools or missing    |
+| F6  | `argument-hint` present (if skill takes args) | Clear hint with placeholders | Vague hint            | Missing when needed     |
 
 ### Content Structure
 
-| # | Check | PASS | WARN | FAIL |
-|---|-------|------|------|------|
-| S1 | Starts with announcement line | Present and correct | Slightly different format | Missing |
-| S2 | Has title + role statement | Clear role and boundaries | Role but no boundaries | Missing |
-| S3 | Uses numbered sections | Consistent numbering | Inconsistent | No structure |
-| S4 | Progressive disclosure (core → detail → reference) | Clear progression | Somewhat organized | Random order |
-| S5 | Under 500 lines | < 400 lines | 400-500 lines | > 500 lines |
-| S6 | Supporting files extracted when needed | Properly extracted | Could extract more | > 500 lines, nothing extracted |
+| #   | Check                                              | PASS                      | WARN                      | FAIL                           |
+| --- | -------------------------------------------------- | ------------------------- | ------------------------- | ------------------------------ |
+| S1  | Starts with announcement line                      | Present and correct       | Slightly different format | Missing                        |
+| S2  | Has title + role statement                         | Clear role and boundaries | Role but no boundaries    | Missing                        |
+| S3  | Uses numbered sections                             | Consistent numbering      | Inconsistent              | No structure                   |
+| S4  | Progressive disclosure (core → detail → reference) | Clear progression         | Somewhat organized        | Random order                   |
+| S5  | Under 500 lines                                    | < 400 lines               | 400-500 lines             | > 500 lines                    |
+| S6  | Supporting files extracted when needed             | Properly extracted        | Could extract more        | > 500 lines, nothing extracted |
 
 ### Content Quality
 
-| # | Check | PASS | WARN | FAIL |
-|---|-------|------|------|------|
-| Q1 | Rules use clear degrees of freedom (MUST/Prefer/Consider) | Consistent markers | Mostly clear | Ambiguous "try to" language |
-| Q2 | Code examples for key patterns | Complete, runnable examples | Pseudocode fragments | No examples |
-| Q3 | Anti-pattern tables where relevant | DO/DON'T comparisons | Some comparisons | No anti-pattern guidance |
-| Q4 | Grounded in docs/standards, not opinion | Citations or framework refs | Mostly grounded | Pure opinion |
-| Q5 | Checklist at the end | Comprehensive checklist | Partial checklist | No checklist |
-| Q6 | No factual errors or outdated info | Current and accurate | Minor outdated refs | Major inaccuracies |
+| #   | Check                                                     | PASS                        | WARN                 | FAIL                        |
+| --- | --------------------------------------------------------- | --------------------------- | -------------------- | --------------------------- |
+| Q1  | Rules use clear degrees of freedom (MUST/Prefer/Consider) | Consistent markers          | Mostly clear         | Ambiguous "try to" language |
+| Q2  | Code examples for key patterns                            | Complete, runnable examples | Pseudocode fragments | No examples                 |
+| Q3  | Anti-pattern tables where relevant                        | DO/DON'T comparisons        | Some comparisons     | No anti-pattern guidance    |
+| Q4  | Grounded in docs/standards, not opinion                   | Citations or framework refs | Mostly grounded      | Pure opinion                |
+| Q5  | Checklist at the end                                      | Comprehensive checklist     | Partial checklist    | No checklist                |
+| Q6  | No factual errors or outdated info                        | Current and accurate        | Minor outdated refs  | Major inaccuracies          |
 
 ### Tool Usage
 
-| # | Check | PASS | WARN | FAIL |
-|---|-------|------|------|------|
-| T1 | Tool list matches what skill actually does | Exact match | Minor mismatch | Major mismatch |
-| T2 | No unnecessary powerful tools | Minimal set | 1-2 extras | Unrestricted |
+| #   | Check                                      | PASS                                          | WARN           | FAIL                    |
+| --- | ------------------------------------------ | --------------------------------------------- | -------------- | ----------------------- |
+| T1  | Tool list matches what skill actually does | Exact match                                   | Minor mismatch | Major mismatch          |
+| T2  | No unnecessary powerful tools              | Minimal set                                   | 1-2 extras     | Unrestricted            |
+| T3  | No interactive tools in `allowed-tools`    | No AskUserQuestion/EnterPlanMode/ExitPlanMode | —              | Interactive tool listed |
 
 ### Scoring
 

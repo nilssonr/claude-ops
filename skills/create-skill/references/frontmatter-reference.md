@@ -70,24 +70,22 @@ Complete reference for every YAML frontmatter field available in Claude Code SKI
 
 - **Type**: `string` (comma-separated list)
 - **Required**: No (defaults to all tools)
-- **Description**: Restricts which tools the skill can use. This is a security and focus mechanism — prevents skills from doing things outside their scope.
+- **Description**: Tools that Claude can use **without asking permission** when this skill is active. This is an auto-approve list, not a restriction — tools not listed still work but require normal permission approval.
 - **Example**: `allowed-tools: Read, Grep, Glob, Edit, Write, Bash`
 - **Common tool sets**:
 
-  | Use Case | Tools |
-  |----------|-------|
-  | Read-only analysis | `Read, Grep, Glob` |
-  | Code modification | `Read, Grep, Glob, Edit, Write, Bash` |
-  | Research & interview | `Read, Grep, Glob, Bash, WebSearch, WebFetch, AskUserQuestion` |
-  | Full generation | `Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch, AskUserQuestion` |
-  | Planning workflow | `Read, Grep, Glob, Bash, WebSearch, WebFetch, AskUserQuestion, EnterPlanMode` |
+  | Use Case           | Tools                                                      |
+  | ------------------ | ---------------------------------------------------------- |
+  | Read-only analysis | `Read, Grep, Glob`                                         |
+  | Code modification  | `Read, Grep, Glob, Edit, Write, Bash`                      |
+  | Research           | `Read, Grep, Glob, Bash, WebSearch, WebFetch`              |
+  | Full generation    | `Read, Grep, Glob, Edit, Write, Bash, WebSearch, WebFetch` |
 
 - **Tips**:
   - Principle of least privilege: only include tools the skill actually needs.
   - Include `Read, Grep, Glob` as baseline for any skill that references code.
   - Include `WebSearch, WebFetch` only if the skill needs online research.
-  - Include `AskUserQuestion` if the skill has an interactive interview phase.
-  - Include `EnterPlanMode` only if the skill transitions to plan mode.
+  - **NEVER include `AskUserQuestion`, `EnterPlanMode`, or `ExitPlanMode`.** These are interactive/UI tools that require user input. Listing them in `allowed-tools` causes auto-approval which skips the user prompt entirely, returning empty results. They are always available without being listed.
 
 ### `disable-model-invocation`
 

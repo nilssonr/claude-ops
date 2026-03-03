@@ -29,8 +29,9 @@ Input: $ARGUMENTS
 3. **Reproduce first.** Before investigating, confirm you can reproduce the error. If you can't reproduce it, say so and adjust strategy.
 4. **2-strike rule.** After 2 failed fix attempts, STOP fixing. Go back to investigation. Research online if needed. The hypothesis is likely wrong.
 5. **Research unfamiliar errors.** If the error message, library, or behavior is unfamiliar, search online BEFORE attempting a fix. Don't burn strikes on guesses.
-6. **Minimal fix.** Fix only what's broken. Don't refactor surrounding code, add features, or "improve" things while fixing a bug.
-7. **Verify and check regressions.** After every fix, verify the original error is resolved AND run related tests to check for regressions.
+6. **Deep investigation via agent.** For complex bugs spanning multiple modules, spawn an Explore agent to search the codebase for related code paths, similar patterns, and relevant configuration before forming hypotheses. This prevents tunnel vision on the first suspicious file.
+7. **Minimal fix.** Fix only what's broken. Don't refactor surrounding code, add features, or "improve" things while fixing a bug.
+8. **Verify and check regressions.** After every fix, verify the original error is resolved AND run related tests to check for regressions.
 
 ---
 
@@ -40,13 +41,13 @@ Classify the error before investigating. This determines your approach.
 
 ### Error Classification
 
-| Dimension | Options |
-|-----------|---------|
-| **Type** | Runtime error, compile/build error, type error, logic error, configuration error, environment error, network/I/O error |
-| **Scope** | Single function, single module, cross-module, system-wide |
-| **Severity** | Crash/data loss, feature broken, degraded performance, cosmetic |
-| **Reproducibility** | Always, sometimes, only in specific environment, cannot reproduce yet |
-| **Familiarity** | Seen this before, recognize the pattern, completely unfamiliar |
+| Dimension           | Options                                                                                                                |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Type**            | Runtime error, compile/build error, type error, logic error, configuration error, environment error, network/I/O error |
+| **Scope**           | Single function, single module, cross-module, system-wide                                                              |
+| **Severity**        | Crash/data loss, feature broken, degraded performance, cosmetic                                                        |
+| **Reproducibility** | Always, sometimes, only in specific environment, cannot reproduce yet                                                  |
+| **Familiarity**     | Seen this before, recognize the pattern, completely unfamiliar                                                         |
 
 ### Triage Output
 
@@ -84,15 +85,15 @@ Test:       [What you will check to confirm or reject this hypothesis]
 
 Techniques by error type:
 
-| Error Type | Investigation Approach |
-|------------|----------------------|
-| Runtime error | Read stack trace → find the throwing line → trace inputs backward |
-| Build/compile error | Read the full error → check the referenced file:line → check imports/deps |
-| Type error | Read the type mismatch → check both the expected and actual types → trace where the wrong type originates |
-| Logic error | Add logging or read through the logic path → identify where actual behavior diverges from expected |
-| Config error | Compare config against docs/schema → check env variables → check file paths |
-| Environment error | Check versions, PATH, permissions, disk space, network connectivity |
-| Network/I/O error | Check endpoint availability, request/response format, auth tokens, timeouts |
+| Error Type          | Investigation Approach                                                                                    |
+| ------------------- | --------------------------------------------------------------------------------------------------------- |
+| Runtime error       | Read stack trace → find the throwing line → trace inputs backward                                         |
+| Build/compile error | Read the full error → check the referenced file:line → check imports/deps                                 |
+| Type error          | Read the type mismatch → check both the expected and actual types → trace where the wrong type originates |
+| Logic error         | Add logging or read through the logic path → identify where actual behavior diverges from expected        |
+| Config error        | Compare config against docs/schema → check env variables → check file paths                               |
+| Environment error   | Check versions, PATH, permissions, disk space, network connectivity                                       |
+| Network/I/O error   | Check endpoint availability, request/response format, auth tokens, timeouts                               |
 
 ### Step 3: Confirm or Reject
 
@@ -173,13 +174,13 @@ Strike 2: Fix attempt failed → STOP fixing. Go back to Phase 2 or research onl
 
 ### When to research
 
-| Trigger | Action |
-|---------|--------|
-| Low familiarity during triage | Research before forming first hypothesis |
-| Error message you don't recognize | Search for the exact error message |
-| Library/framework you haven't used before | Read official docs for the relevant feature |
-| 2 strikes reached | Search for the error + context |
-| Behavior contradicts documentation | Verify against latest docs — might be version-specific |
+| Trigger                                   | Action                                                 |
+| ----------------------------------------- | ------------------------------------------------------ |
+| Low familiarity during triage             | Research before forming first hypothesis               |
+| Error message you don't recognize         | Search for the exact error message                     |
+| Library/framework you haven't used before | Read official docs for the relevant feature            |
+| 2 strikes reached                         | Search for the error + context                         |
+| Behavior contradicts documentation        | Verify against latest docs — might be version-specific |
 
 ### How to research effectively
 
@@ -226,14 +227,14 @@ For everything else:
 
 ### Deciding
 
-| Signal | Dispatch |
-|--------|----------|
-| Error message + line number + obvious cause | Quick fix |
-| Error message is generic or misleading | Full investigation |
-| You've fixed this exact issue before | Quick fix |
-| Unfamiliar library or framework | Full investigation with upfront research |
-| Intermittent / environment-specific | Full investigation |
-| User-reported without reproduction | Full investigation, reproduce first |
+| Signal                                      | Dispatch                                 |
+| ------------------------------------------- | ---------------------------------------- |
+| Error message + line number + obvious cause | Quick fix                                |
+| Error message is generic or misleading      | Full investigation                       |
+| You've fixed this exact issue before        | Quick fix                                |
+| Unfamiliar library or framework             | Full investigation with upfront research |
+| Intermittent / environment-specific         | Full investigation                       |
+| User-reported without reproduction          | Full investigation, reproduce first      |
 
 ---
 
@@ -257,16 +258,16 @@ Use this structure for every hypothesis:
 
 ## 8. Anti-Pattern Table
 
-| DON'T | DO | WHY |
-|-------|-----|-----|
-| Change code before reading the error message | Read the full error, stack trace, and surrounding context | Uninformed changes are guesses that waste strikes |
-| Try 5 different things hoping one works | Form a hypothesis, test it, then adjust | Shotgun debugging doesn't build understanding |
-| Fix the symptom (suppress the error, add a null check) | Fix the root cause (why is the value null?) | Symptom fixes create new bugs and hide real issues |
-| "Refactor while I'm here" | Fix the bug and nothing else | Mixing refactoring with bug fixing makes verification impossible |
-| Assume the error message is accurate | Verify the actual behavior — error messages can be misleading | The real error is often one frame up the stack |
-| Skip reproduction ("I see the bug in the code") | Reproduce first, then fix, then verify reproduction is gone | Without reproduction you can't verify the fix |
-| Keep trying variations of the same fix | After 2 strikes, stop and research | Persistence without new information is thrashing |
-| Search online before reading the code | Read the code and error first, then research if needed | The answer is usually in the code; searching first adds noise |
+| DON'T                                                  | DO                                                            | WHY                                                              |
+| ------------------------------------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Change code before reading the error message           | Read the full error, stack trace, and surrounding context     | Uninformed changes are guesses that waste strikes                |
+| Try 5 different things hoping one works                | Form a hypothesis, test it, then adjust                       | Shotgun debugging doesn't build understanding                    |
+| Fix the symptom (suppress the error, add a null check) | Fix the root cause (why is the value null?)                   | Symptom fixes create new bugs and hide real issues               |
+| "Refactor while I'm here"                              | Fix the bug and nothing else                                  | Mixing refactoring with bug fixing makes verification impossible |
+| Assume the error message is accurate                   | Verify the actual behavior — error messages can be misleading | The real error is often one frame up the stack                   |
+| Skip reproduction ("I see the bug in the code")        | Reproduce first, then fix, then verify reproduction is gone   | Without reproduction you can't verify the fix                    |
+| Keep trying variations of the same fix                 | After 2 strikes, stop and research                            | Persistence without new information is thrashing                 |
+| Search online before reading the code                  | Read the code and error first, then research if needed        | The answer is usually in the code; searching first adds noise    |
 
 ---
 
@@ -274,12 +275,12 @@ Use this structure for every hypothesis:
 
 Parse `$ARGUMENTS` to determine the starting point:
 
-| Argument | Action |
-|----------|--------|
-| (empty) | Ask the user to describe the problem or paste the error |
-| Error message | Start with triage using the error message |
-| File path | Read the file, look for obvious issues, ask user what's wrong |
-| Description of behavior | Start with triage using the description |
+| Argument                | Action                                                        |
+| ----------------------- | ------------------------------------------------------------- |
+| (empty)                 | Ask the user to describe the problem or paste the error       |
+| Error message           | Start with triage using the error message                     |
+| File path               | Read the file, look for obvious issues, ask user what's wrong |
+| Description of behavior | Start with triage using the description                       |
 
 ---
 

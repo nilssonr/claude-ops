@@ -8,7 +8,7 @@ description: >-
   short request without specifying scope, behavior, constraints, or success criteria.
   DO NOT TRIGGER when: the user gives a specific, unambiguous instruction with clear scope.
 user-invocable: true
-allowed-tools: Read, Grep, Glob, Bash, WebSearch, WebFetch, AskUserQuestion, EnterPlanMode
+allowed-tools: Read, Grep, Glob, Bash, WebSearch, WebFetch
 ---
 
 **Announce to the user: "Skill activated: brainstorm"**
@@ -42,15 +42,15 @@ Input: $ARGUMENTS
 
 Classify the request along these dimensions. Flag any that are missing or ambiguous:
 
-| Dimension | Question | Status |
-|-----------|----------|--------|
-| **What** | What exactly is being built or changed? | ? |
-| **Where** | Which files, components, or systems are affected? | ? |
-| **Why** | What problem does this solve? What's the motivation? | ? |
-| **Behavior** | What should happen? What are the user-visible outcomes? | ? |
-| **Constraints** | Performance, security, accessibility, compatibility? | ? |
-| **Boundaries** | What is explicitly out of scope? | ? |
-| **Success** | How do you know it's done? What's the acceptance test? | ? |
+| Dimension       | Question                                                | Status |
+| --------------- | ------------------------------------------------------- | ------ |
+| **What**        | What exactly is being built or changed?                 | ?      |
+| **Where**       | Which files, components, or systems are affected?       | ?      |
+| **Why**         | What problem does this solve? What's the motivation?    | ?      |
+| **Behavior**    | What should happen? What are the user-visible outcomes? | ?      |
+| **Constraints** | Performance, security, accessibility, compatibility?    | ?      |
+| **Boundaries**  | What is explicitly out of scope?                        | ?      |
+| **Success**     | How do you know it's done? What's the acceptance test?  | ?      |
 
 If 3+ dimensions are missing, you MUST interview before proceeding.
 If 1-2 are missing and you can infer them from the codebase with high confidence, declare your assumptions and ask for confirmation.
@@ -70,6 +70,7 @@ Before asking the user anything, search the repo for context:
 3. **Map the affected area** — identify which files would need changes and what patterns they follow.
 
 Use what you find to inform your questions. For example:
+
 - "I see you have a `src/components/sidebar/` with a compound component pattern. Should the new component follow the same structure?"
 - "The project uses Zustand for state management. Should this feature integrate with the existing store?"
 
@@ -84,6 +85,7 @@ Use AskUserQuestion to resolve the gaps identified in Phase 1. Structure your qu
 Present your inferences and ask the user to confirm or correct:
 
 "Based on the codebase, here's what I understand:
+
 - [Assumption 1 grounded in code you found]
 - [Assumption 2 grounded in code you found]
 - [Assumption 3 grounded in code you found]
@@ -103,10 +105,12 @@ Use AskUserQuestion with concrete options derived from the codebase:
 "To keep this focused, I want to confirm what's in and out of scope:
 
 **In scope:**
+
 - [Feature A]
 - [Feature B]
 
 **Out of scope (for now):**
+
 - [Feature C]
 - [Feature D]
 

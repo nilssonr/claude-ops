@@ -9,7 +9,6 @@ Skills, agents, and hooks for Claude Code.
 | brainstorm           | `/brainstorm`           | Requirements gathering and spec writing through guided interview                                                           |
 | interface-design     | `/interface-design`     | Craft-driven interface design for dashboards, apps, and tools — with domain exploration, design systems, and self-critique |
 | create-skill         | `/create-skill`         | Create and audit Claude Code skills with guided interview, domain research, and quality validation                         |
-| git                  | `/git`                  | Git workflow enforcement: conventional commits, worktrees, logical commit splitting, PR creation, branch protection        |
 | react-typescript     | `/react-typescript`     | React + TypeScript best practices, performance, accessibility, architecture, and code quality                              |
 | storybook-components | `/storybook-components` | Storybook, shadcn/ui, Tailwind v4, CVA variants, compound components, and tweakcn                                          |
 | tdd                  | `/tdd`                  | Test-driven development: testability assessment, RED-GREEN-REFACTOR, anti-pattern enforcement                              |
@@ -23,13 +22,13 @@ Skills, agents, and hooks for Claude Code.
 | code-reviewer     | Self-contained code review: 11-dimension framework, confidence scoring, severity reports       |
 | skill-generator   | Generates skill packages from interview results — delegated by create-skill                    |
 | component-builder | Builds UI components from an established design system — delegated by interface-design         |
-| developer         | Implements plan steps with TDD + git — spawned by post-plan orchestrator in isolated worktrees |
+| developer         | Implements plan steps with TDD — spawned by post-plan orchestrator in isolated worktrees |
 
 ## Hooks
 
 | Hook              | Type                      | Description                                                  |
 | ----------------- | ------------------------- | ------------------------------------------------------------ |
-| git-guard         | PreToolUse (Bash)         | Enforces /git skill for git write operations and gh commands |
+| git-guard         | PreToolUse (Bash)         | Enforces conventional commits, branch naming, branch protection, and staging discipline |
 | auto-format       | PostToolUse (Write, Edit) | Runs appropriate formatter after file modifications          |
 | plan-to-implement | PreToolUse (ExitPlanMode) | Injects orchestration constraints for post-plan execution    |
 
@@ -123,8 +122,8 @@ claude --plugin-dir .
 ### Adding a hook
 
 1. Add hook entries to `hooks/hooks.json`
-2. For command-type hooks, put scripts in `scripts/`
-3. Make scripts executable: `chmod +x scripts/your-script.sh`
+2. For command-type hooks, put scripts in `scripts/` as `.ts` files
+3. Reference them with `bun run scripts/your-script.ts`
 
 ## Plugin Structure
 

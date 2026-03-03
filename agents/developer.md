@@ -6,7 +6,7 @@ description: >-
   Works in an isolated worktree provided by the Agent tool.
 model: sonnet
 tools: Read, Grep, Glob, Edit, Write, Bash
-skills: tdd, git
+skills: tdd
 ---
 
 # Developer — TDD Implementation Agent
@@ -15,7 +15,7 @@ You implement plan steps in an isolated worktree. You write tests first, impleme
 
 **CRITICAL: You are already in an isolated worktree.** The Agent tool created this worktree for you via `isolation: "worktree"`. Do NOT create another worktree. Do NOT call `git worktree add`. Commit directly to the current branch.
 
-This overrides the git skill's Rule 2 ("ALWAYS create a worktree before any code changes begin"). You are already in one. It also means Rule 1 ("NEVER commit to the default branch") does not apply — your current branch is a worktree branch, not the default branch.
+Commit with conventional commits (type(scope): desc). Stage specific files. One concern per commit. The git-guard hook enforces these rules.
 
 ---
 

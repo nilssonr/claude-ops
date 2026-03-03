@@ -200,56 +200,42 @@ Wait for the agent to return results, then present them to the user.
 
 # Audit Mode
 
-## Phase A1: Load and Analyze
+## Phase A1: Load and Run Audit Script
 
 1. **Locate the skill**: Use Glob to find `skills/[skill-name]/SKILL.md`.
    - If not found, list all available skills and ask the user to choose.
-2. **Read all files**: Read the SKILL.md and any supporting files in the skill directory.
-3. **Parse frontmatter**: Extract all YAML frontmatter fields.
-4. **Measure structure**: Count lines, sections, code blocks, tables, and checklist items.
+2. **Run the audit script** to mechanically check structural quality:
+
+```bash
+bun run [base_directory]/scripts/audit.ts skills/[skill-name]/SKILL.md
+```
+
+The script checks F1-F6, S1-S3, S5-S6, Q1-Q3, Q5, T1, T3 mechanically and outputs JSON:
+
+```json
+{
+  "path": "skills/tdd/SKILL.md",
+  "line_count": 270,
+  "results": [
+    { "id": "F1", "check": "name format", "status": "PASS", "detail": "tdd" },
+    { "id": "Q4", "check": "grounded in docs", "status": "SKIPPED", "detail": "requires LLM judgment" }
+  ],
+  "score": { "pass": 14, "warn": 2, "fail": 1, "skipped": 3, "percentage": 83 },
+  "rating": "Good"
+}
+```
 
 ---
 
-## Phase A2: Evaluate Against Checklist
+## Phase A2: Evaluate SKIPPED Items
 
-Read the audit checklist from `skills/create-skill/references/best-practices.md`
-(Section 7: Quality Audit Checklist).
+The audit script marks items requiring judgment as `SKIPPED`. Read the SKILL.md and evaluate only these:
 
-Score each item as **PASS**, **WARN**, **FAIL**, or **N/A**.
+- **S4** (progressive disclosure): Is content ordered from core rules → patterns → edge cases → references?
+- **Q4** (grounded in docs): Are recommendations based on official documentation, not opinion?
+- **Q6** (factual accuracy): Is content current and free of errors?
 
-### Evaluation Categories
-
-**Frontmatter Quality** (F1-F6):
-
-- Verify `name` format (lowercase-hyphenated, 1-3 words).
-- Verify `description` has TRIGGER and DO NOT TRIGGER clauses.
-- Verify `description` uses third-person voice.
-- Verify `user-invocable` is set.
-- Verify `allowed-tools` follows least privilege.
-- Verify `argument-hint` is present if skill accepts arguments.
-
-**Content Structure** (S1-S6):
-
-- Verify announcement line is present and correct.
-- Verify title + role statement with boundaries.
-- Verify numbered sections with consistent format.
-- Verify progressive disclosure ordering.
-- Verify line count (< 500 target).
-- Verify supporting files are extracted when needed.
-
-**Content Quality** (Q1-Q6):
-
-- Verify degrees of freedom are explicit (MUST/Prefer/Consider).
-- Verify code examples are present and complete.
-- Verify anti-pattern tables are used where relevant.
-- Verify content is grounded in docs/standards.
-- Verify quality checklist exists.
-- Verify no factual errors or outdated information.
-
-**Tool Usage** (T1-T2):
-
-- Verify tool list matches actual skill behavior.
-- Verify no unnecessarily powerful tools.
+Score each as **PASS**, **WARN**, or **FAIL**. Merge your evaluations with the script's results to produce the final report.
 
 ---
 

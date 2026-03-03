@@ -29,7 +29,6 @@ Input: $ARGUMENTS
 4. **Test what it DOES, not what it IS.** Test observable behavior and return values, not internal structure, property existence, or implementation details.
 5. **One test at a time.** Write one failing test, make it pass, then consider the next. Never write a batch of failing tests.
 6. **REFACTOR is encouraged, not gated.** After GREEN, improve code quality if warranted. Run tests after refactoring to confirm nothing broke. Don't force refactoring when the code is already clean.
-7. **Defer commits to /git.** TDD handles the test cycle only. When the user wants to commit, tell them to use `/git`.
 
 ---
 
@@ -233,17 +232,7 @@ For changes involving multiple behaviors, edge cases, or integration points:
 
 ---
 
-## 8. Integration with /git
-
-TDD handles the test cycle. Version control is a separate concern.
-
-- **During TDD**: Focus on RED-GREEN-REFACTOR. Don't commit between phases.
-- **After a complete cycle**: Tell the user the cycle is complete and suggest committing if appropriate.
-- **Never run git commands** from this skill. If the user wants to commit, direct them to `/git`.
-
----
-
-## 9. Argument Handling
+## 8. Argument Handling
 
 Parse `$ARGUMENTS` to determine what to test:
 
@@ -256,7 +245,7 @@ Parse `$ARGUMENTS` to determine what to test:
 
 ---
 
-## 10. Quality Checklist
+## 9. Quality Checklist
 
 Before completing a TDD cycle, verify:
 

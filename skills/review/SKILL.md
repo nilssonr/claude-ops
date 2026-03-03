@@ -38,7 +38,7 @@ Input: $ARGUMENTS
 Run the discovery script to detect the review target, filter files, group by domain, and write per-group diffs to temp files. This is a single command — do not run additional git commands.
 
 ```bash
-python3 [base_directory]/scripts/discover.py $ARGUMENTS
+bun run [base_directory]/scripts/discover.ts $ARGUMENTS
 ```
 
 Where `[base_directory]` is the path from "Base directory for this skill:" in the header above.
@@ -162,10 +162,29 @@ After spawning all agents, output a short status message:
 
 After all agents have completed:
 
-1. Collect all findings from all agents.
-2. Deduplicate: if two agents flagged the same file:line, keep the higher-confidence finding.
-3. Group findings by severity, then present per-group tables.
-4. Produce the report in this format:
+1. Collect all raw markdown results from the agents into a JSON array of strings.
+2. Run the consolidation script to deduplicate, sort, and structure findings:
+
+```bash
+echo '$AGENT_RESULTS_JSON' | bun run [base_directory]/scripts/consolidate.ts
+```
+
+The script outputs JSON:
+
+```json
+{
+  "target": "...",
+  "metrics": { "files": 42, "reviewers": 3, "suppressed": 5 },
+  "findings": {
+    "critical": [{ "title": "...", "location": "file:line", "confidence": 92, "group": "src/auth", "signal": "...", "evidence": "...", "impact": "..." }],
+    "warnings": [...],
+    "info": [...]
+  }
+}
+```
+
+3. Set the `target` field from the discovery output's target description.
+4. Render the JSON into the report format below:
 
 ```
 ## Review Summary

@@ -148,9 +148,10 @@ Use AskUserQuestion for final confirmation. Only proceed to Phase 5 when the use
 
 ---
 
-## Phase 5: Write the Spec
+## Phase 5: Write and Validate the Spec
 
 Produce a structured spec. Output it directly in the conversation (do not write to a file).
+After writing the spec, validate it with the completeness checker:
 
 ### Spec Format
 
@@ -196,6 +197,32 @@ Produce a structured spec. Output it directly in the conversation (do not write 
 - [ ] [Observable, testable criterion]
 - [ ] [Observable, testable criterion]
 ```
+
+### Validate the Spec
+
+After producing the spec, pipe it through the validation script:
+
+```bash
+echo "$SPEC_MARKDOWN" | bun run [base_directory]/scripts/validate-spec.ts
+```
+
+The script checks required sections, markers, and observable criteria:
+
+```json
+{
+  "complete": true,
+  "sections": {
+    "problem_statement": { "present": true, "empty": false },
+    "scope": { "present": true, "has_affected": true, "has_new_files": true, "has_out_of_scope": true },
+    "requirements": { "present": true, "must_count": 3, "should_count": 1 },
+    "behavior": { "present": true, "has_happy_path": true, "has_edge_cases": true },
+    "success_criteria": { "present": true, "criteria_count": 4, "observable": true }
+  },
+  "warnings": []
+}
+```
+
+If warnings are present, revise the spec to address them before proceeding.
 
 ---
 

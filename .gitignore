@@ -16,5 +16,6 @@ Thumbs.db
 # Logs
 *.log
 
-# Node (if using MCP servers with npm)
+# Node / Bun
 node_modules/
+bun.lock

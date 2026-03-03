@@ -346,15 +346,38 @@ Extract design patterns from existing code to create a system.md file.
 /interface-design extract <path>   # Extract from specific directory
 ```
 
-### What to Extract
+### Step 1: Run the Token Scanner
 
-Scan UI files (tsx, jsx, vue, svelte) for:
+Run the extraction script to scan all UI files for design token frequencies:
 
-1. Repeated spacing values — suggest base unit and scale
-2. Repeated radius values — suggest radius scale
-3. Button patterns — height, padding, common sizes
-4. Card patterns — border, padding, shadow usage
-5. Depth strategy — ratio of shadows to borders
+```bash
+bun run [base_directory]/scripts/extract-tokens.ts [path]
+```
+
+The script outputs JSON with frequency counts:
+
+```json
+{
+  "files_scanned": 47,
+  "spacing": { "4": 82, "8": 64, "2": 41 },
+  "radius": { "lg": 31, "md": 22, "full": 14 },
+  "colors": { "zinc-900": 28, "white": 24, "blue-600": 18 },
+  "shadows": { "sm": 12, "md": 8, "none": 45 },
+  "typography": { "size:sm": 34, "size:base": 28, "weight:medium": 15 },
+  "suggested_base_unit": 4,
+  "depth_strategy": "border-dominant"
+}
+```
+
+### Step 2: Interpret and Propose
+
+Using the frequency data, identify:
+
+1. **Spacing scale** — the `suggested_base_unit` and most common multiples
+2. **Radius scale** — dominant radius values
+3. **Color palette** — most-used colors, grouped by hue
+4. **Depth strategy** — border-dominant, shadow-dominant, or mixed
+5. **Typography scale** — dominant sizes and weights
 
 Present findings and offer to create `.interface-design/system.md`.
 

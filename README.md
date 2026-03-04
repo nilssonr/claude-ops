@@ -17,12 +17,13 @@ Skills, agents, and hooks for Claude Code.
 
 ## Agents
 
-| Agent             | Description                                                                              |
-| ----------------- | ---------------------------------------------------------------------------------------- |
-| code-reviewer     | Self-contained code review: 11-dimension framework, confidence scoring, severity reports |
-| skill-generator   | Generates skill packages from interview results — delegated by create-skill              |
-| component-builder | Builds UI components from an established design system — delegated by interface-design   |
-| developer         | Implements plan steps with TDD — spawned by post-plan orchestrator in isolated worktrees |
+| Agent             | Description                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| code-reviewer     | Self-contained code review: 11-dimension framework, confidence scoring, severity reports            |
+| hercule-poirot    | Autonomous investigation agent: verifies claims via subagent research, confidence scoring, verdicts |
+| skill-generator   | Generates skill packages from interview results — delegated by create-skill                         |
+| component-builder | Builds UI components from an established design system — delegated by interface-design              |
+| developer         | Implements plan steps with TDD — spawned by post-plan orchestrator in isolated worktrees            |
 
 ## Hooks
 

@@ -131,6 +131,7 @@ jobs:
       # Should block edit on default branch (exit 2).
       - name: "branch-gate: blocks edit on default branch"
         run: |
+          git checkout main
           set +e
           echo "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$(pwd)/test.ts\"}}" \
             | bun run scripts/branch-gate.ts 2>/tmp/stderr

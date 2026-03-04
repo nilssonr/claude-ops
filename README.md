@@ -17,20 +17,20 @@ Skills, agents, and hooks for Claude Code.
 
 ## Agents
 
-| Agent             | Description                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------- |
-| code-reviewer     | Self-contained code review: 11-dimension framework, confidence scoring, severity reports       |
-| skill-generator   | Generates skill packages from interview results — delegated by create-skill                    |
-| component-builder | Builds UI components from an established design system — delegated by interface-design         |
+| Agent             | Description                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| code-reviewer     | Self-contained code review: 11-dimension framework, confidence scoring, severity reports |
+| skill-generator   | Generates skill packages from interview results — delegated by create-skill              |
+| component-builder | Builds UI components from an established design system — delegated by interface-design   |
 | developer         | Implements plan steps with TDD — spawned by post-plan orchestrator in isolated worktrees |
 
 ## Hooks
 
-| Hook              | Type                      | Description                                                  |
-| ----------------- | ------------------------- | ------------------------------------------------------------ |
+| Hook              | Type                      | Description                                                                             |
+| ----------------- | ------------------------- | --------------------------------------------------------------------------------------- |
 | git-guard         | PreToolUse (Bash)         | Enforces conventional commits, branch naming, branch protection, and staging discipline |
-| auto-format       | PostToolUse (Write, Edit) | Runs appropriate formatter after file modifications          |
-| plan-to-implement | PreToolUse (ExitPlanMode) | Injects orchestration constraints for post-plan execution    |
+| auto-format       | PostToolUse (Write, Edit) | Runs appropriate formatter after file modifications                                     |
+| plan-to-implement | PreToolUse (ExitPlanMode) | Injects orchestration constraints for post-plan execution                               |
 
 ## Interface Design
 
@@ -92,6 +92,34 @@ brainstorm → plan mode → plan file → approve → hook injects constraints
 ### Plan format
 
 No rigid format is required. The orchestrator reads any plan and judges parallelization itself. Write plans naturally — describe what needs to happen, note dependencies where they exist, and let the orchestrator figure out the execution order.
+
+## Statusline
+
+A custom statusline that shows model, git branch, working directory, and session ID:
+
+```
+Claude Opus 4.6 | feat/my-feature | ~/Code/my-project | abc123
+```
+
+### Setup
+
+1. Copy the statusline script:
+
+```bash
+cp scripts/statusline.sh ~/.claude/statusline.sh
+chmod +x ~/.claude/statusline.sh
+```
+
+2. Add to `~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
+  }
+}
+```
 
 ## Installation
 

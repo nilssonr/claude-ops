@@ -68,9 +68,7 @@ try {
   // Branch naming
   const checkoutBranch = command.match(/git\s+checkout\s+-b\s+(\S+)/);
   const switchBranch = command.match(/git\s+switch\s+-c\s+(\S+)/);
-  const worktreeBranch = command.match(
-    /git\s+worktree\s+add\s+.*-b\s+(\S+)/,
-  );
+  const worktreeBranch = command.match(/git\s+worktree\s+add\s+.*-b\s+(\S+)/);
   const newBranch =
     checkoutBranch?.[1] ?? switchBranch?.[1] ?? worktreeBranch?.[1];
   if (newBranch && !BRANCH_RE.test(newBranch)) {
@@ -102,15 +100,25 @@ try {
 
     // Commit message format
     let subject: string | null = null;
-    const doubleQuoteMsg = command.match(/-m\s+"([^"]+)"/);
-    const singleQuoteMsg = command.match(/-m\s+'([^']+)'/);
-    const heredocMsg = command.match(/<<['"]?(\w+)['"]?\n([\s\S]*?)\n\s*\1/);
-    if (doubleQuoteMsg) {
+    // Try heredoc-in-subshell first: -m "$(cat <<'EOF' ... EOF )"
+    const catHeredoc = command.match(
+      /-m\s+"\$\(cat\s+<<['"]?(\w+)['"]?\n([\s\S]*?)\n\s*\1/,
+    );
+    // Bare heredoc: -m <<'EOF' ... EOF
+    const bareHeredoc = command.match(
+      /-m\s+<<['"]?(\w+)['"]?\n([\s\S]*?)\n\s*\1/,
+    );
+    // Single-line quotes (exclude newlines so they don't swallow heredocs)
+    const doubleQuoteMsg = command.match(/-m\s+"([^"\n]+)"/);
+    const singleQuoteMsg = command.match(/-m\s+'([^'\n]+)'/);
+    if (catHeredoc) {
+      subject = catHeredoc[2].split("\n")[0].trim();
+    } else if (bareHeredoc) {
+      subject = bareHeredoc[2].split("\n")[0].trim();
+    } else if (doubleQuoteMsg) {
       subject = doubleQuoteMsg[1];
     } else if (singleQuoteMsg) {
       subject = singleQuoteMsg[1];
-    } else if (heredocMsg) {
-      subject = heredocMsg[2].split("\n")[0].trim();
     }
 
     if (subject && !CONVENTIONAL_RE.test(subject)) {

@@ -150,7 +150,7 @@ Use AskUserQuestion for final confirmation. Only proceed to Phase 5 when the use
 
 ## Phase 5: Write and Validate the Spec
 
-Produce a structured spec. Output it directly in the conversation (do not write to a file).
+Produce a structured spec. Output it directly in the conversation and also persist it to disk.
 After writing the spec, validate it with the completeness checker:
 
 ### Spec Format
@@ -223,6 +223,16 @@ The script checks required sections, markers, and observable criteria:
 ```
 
 If warnings are present, revise the spec to address them before proceeding.
+
+### Persist the Spec
+
+After validation passes, persist the spec to disk so downstream hooks can inject it into plan mode:
+
+1. Run `git remote get-url origin` and parse `<org>/<repo>` from the remote URL (handles both SSH `git@github.com:org/repo.git` and HTTPS `https://github.com/org/repo.git` formats).
+2. Derive a kebab-case slug from the spec title (e.g., "Context-Rich Pipeline" → `context-rich-pipeline`).
+3. Create the directory: `mkdir -p ~/.claude/specs/<org>/<repo>/`
+4. Write the full spec markdown to `~/.claude/specs/<org>/<repo>/<slug>.md`
+5. Report the saved path to the user: "Spec saved to `<path>`"
 
 ---
 

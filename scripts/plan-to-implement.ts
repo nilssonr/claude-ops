@@ -50,6 +50,9 @@ The orchestrator agent prompt MUST include:
    - Identify which steps can run in parallel vs which have dependencies.
    - For each independent work stream, spawn a claude-ops:developer agent with isolation: "worktree" and mode: "bypassPermissions".
    - Run independent streams in parallel. Run dependent streams sequentially after their dependencies complete.
+   - Each plan step contains a self-contained context package (spec requirements, code excerpts, file paths). When spawning a developer agent, include the FULL step content in the agent's prompt — do NOT summarize or omit code excerpts.
+   - Developer agents should NOT do broad codebase exploration (Glob/Grep across the whole repo). The plan step gives them exact files and existing code. They read only the specific files listed in their step.
+   - If the plan header references a spec file path, read and include it in the orchestrator's context for requirement consultation during execution.
    - After all agents finish, collect the worktree branch names from their results.
    - Merge each branch into the current branch using: git merge <branch> --no-ff
    - If a merge conflict occurs, STOP merging. Report the conflict (files, branches) and do NOT attempt to resolve it.

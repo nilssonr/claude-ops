@@ -1,0 +1,341 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run tsc --noEmit
+
+  test-hooks:
+    name: Test hook scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+
+      # ── auto-format.ts ──────────────────────────────────────────────
+      # PostToolUse hook. Should exit 0 silently when file_path is missing.
+      - name: "auto-format: exits cleanly with no file_path"
+        run: |
+          echo '{"tool_name":"Write","tool_input":{}}' | bun run scripts/auto-format.ts
+
+      # Should exit 0 when file doesn't exist (skips formatting).
+      - name: "auto-format: skips non-existent file"
+        run: |
+          echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/does-not-exist.ts"}}' \
+            | bun run scripts/auto-format.ts
+
+      # Should format a real file without crashing (prettier available via npx).
+      - name: "auto-format: formats a real ts file"
+        run: |
+          echo 'const x=1' > /tmp/test-fmt.ts
+          echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/test-fmt.ts"}}' \
+            | bun run scripts/auto-format.ts
+
+      # ── git-guard.ts ────────────────────────────────────────────────
+      # Should block broad staging (exit 2).
+      - name: "git-guard: blocks git add -A"
+        run: |
+          set +e
+          echo '{"tool_name":"Bash","tool_input":{"command":"git add -A"}}' \
+            | bun run scripts/git-guard.ts 2>/tmp/stderr
+          code=$?
+          [ "$code" -eq 2 ] || { echo "Expected exit 2, got $code"; exit 1; }
+          grep -q "Broad staging not allowed" /tmp/stderr || { echo "Missing block message"; exit 1; }
+
+      - name: "git-guard: blocks git add ."
+        run: |
+          set +e
+          echo '{"tool_name":"Bash","tool_input":{"command":"git add ."}}' \
+            | bun run scripts/git-guard.ts 2>/tmp/stderr
+          code=$?
+          [ "$code" -eq 2 ] || { echo "Expected exit 2, got $code"; exit 1; }
+
+      # Should block bad branch names (exit 2).
+      - name: "git-guard: blocks bad branch name"
+        run: |
+          set +e
+          echo '{"tool_name":"Bash","tool_input":{"command":"git checkout -b my-bad-branch"}}' \
+            | bun run scripts/git-guard.ts 2>/tmp/stderr
+          code=$?
+          [ "$code" -eq 2 ] || { echo "Expected exit 2, got $code"; exit 1; }
+          grep -q "Branch name must match" /tmp/stderr || { echo "Missing branch message"; exit 1; }
+
+      # Should allow good branch names (exit 0).
+      - name: "git-guard: allows valid branch name"
+        run: |
+          echo '{"tool_name":"Bash","tool_input":{"command":"git checkout -b feat/add-auth"}}' \
+            | bun run scripts/git-guard.ts > /dev/null
+
+      # Should block bad commit messages (exit 2).
+      - name: "git-guard: blocks bad commit message"
+        run: |
+          set +e
+          echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"bad message\""}}' \
+            | bun run scripts/git-guard.ts 2>/tmp/stderr
+          code=$?
+          [ "$code" -eq 2 ] || { echo "Expected exit 2, got $code"; exit 1; }
+
+      # Should allow valid conventional commit (exit 0).
+      - name: "git-guard: allows valid commit message"
+        run: |
+          echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"feat(auth): add login flow\""}}' \
+            | bun run scripts/git-guard.ts > /dev/null
+
+      # Should allow scoped breaking change commit.
+      - name: "git-guard: allows breaking change commit"
+        run: |
+          echo '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"feat!: drop Node 16 support\""}}' \
+            | bun run scripts/git-guard.ts > /dev/null
+
+      # Should inject context on git status (exit 0, stdout has context).
+      - name: "git-guard: injects context for git status"
+        run: |
+          output=$(echo '{"tool_name":"Bash","tool_input":{"command":"git status"}}' \
+            | bun run scripts/git-guard.ts)
+          echo "$output" | grep -q "hookSpecificOutput" || { echo "Missing context injection"; exit 1; }
+          echo "$output" | grep -q "conventional commits" || { echo "Missing convention reminder"; exit 1; }
+
+      # Should pass through non-git commands silently (exit 0).
+      - name: "git-guard: ignores non-git commands"
+        run: |
+          output=$(echo '{"tool_name":"Bash","tool_input":{"command":"ls -la"}}' \
+            | bun run scripts/git-guard.ts)
+          [ -z "$output" ] || { echo "Expected no output, got: $output"; exit 1; }
+
+      # Should block bad PR title (exit 2).
+      - name: "git-guard: blocks bad PR title"
+        run: |
+          set +e
+          echo '{"tool_name":"Bash","tool_input":{"command":"gh pr create --title \"bad title\""}}' \
+            | bun run scripts/git-guard.ts 2>/tmp/stderr
+          code=$?
+          [ "$code" -eq 2 ] || { echo "Expected exit 2, got $code"; exit 1; }
+
+      # Should allow valid PR title (exit 0).
+      - name: "git-guard: allows valid PR title"
+        run: |
+          echo '{"tool_name":"Bash","tool_input":{"command":"gh pr create --title \"fix(api): handle timeout\""}}' \
+            | bun run scripts/git-guard.ts > /dev/null
+
+      # ── spec-to-plan.ts ─────────────────────────────────────────────
+      # Should exit silently on wrong tool_name.
+      - name: "spec-to-plan: ignores non-EnterPlanMode tools"
+        run: |
+          output=$(echo '{"tool_name":"Write","tool_input":{}}' \
+            | bun run scripts/spec-to-plan.ts)
+          [ -z "$output" ] || { echo "Expected no output, got: $output"; exit 1; }
+
+      # Should exit silently when no specs directory exists.
+      - name: "spec-to-plan: exits cleanly with no specs dir"
+        run: |
+          output=$(echo '{"tool_name":"EnterPlanMode","tool_input":{}}' \
+            | bun run scripts/spec-to-plan.ts)
+          [ -z "$output" ] || { echo "Expected no output, got: $output"; exit 1; }
+
+      # Should find and inject a spec file when one exists.
+      - name: "spec-to-plan: injects spec content"
+        run: |
+          mkdir -p ~/.claude/specs/test-org/test-repo
+          cat > ~/.claude/specs/test-org/test-repo/test-feature.md << 'SPEC'
+          # Test Feature
+
+          ## Problem Statement
+          Test problem.
+
+          ## Requirements
+          ### Functional
+          1. [MUST] Do the thing
+          2. [SHOULD] Do it well
+          SPEC
+
+          output=$(echo '{"tool_name":"EnterPlanMode","tool_input":{}}' \
+            | bun run scripts/spec-to-plan.ts)
+
+          echo "$output" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'hookSpecificOutput' in d" \
+            || { echo "Missing hookSpecificOutput"; exit 1; }
+          echo "$output" | grep -q "SPEC START" || { echo "Missing spec markers"; exit 1; }
+          echo "$output" | grep -q "Test Feature" || { echo "Missing spec content"; exit 1; }
+          echo "$output" | grep -q "PLANNING INSTRUCTIONS" || { echo "Missing planning instructions"; exit 1; }
+          echo "$output" | grep -q "spec_requirements" || { echo "Missing step format instructions"; exit 1; }
+          echo "$output" | grep -q "COVERAGE CHECK" || { echo "Missing coverage check"; exit 1; }
+
+      # ── plan-to-implement.ts ────────────────────────────────────────
+      # Should exit silently on wrong tool_name.
+      - name: "plan-to-implement: ignores non-ExitPlanMode tools"
+        run: |
+          output=$(echo '{"tool_name":"Write","tool_input":{}}' \
+            | bun run scripts/plan-to-implement.ts)
+          [ -z "$output" ] || { echo "Expected no output, got: $output"; exit 1; }
+
+      # Should exit silently when no plans directory exists.
+      - name: "plan-to-implement: exits cleanly with no plans dir"
+        run: |
+          output=$(echo '{"tool_name":"ExitPlanMode","tool_input":{}}' \
+            | bun run scripts/plan-to-implement.ts)
+          [ -z "$output" ] || { echo "Expected no output, got: $output"; exit 1; }
+
+      # Should find and inject a plan file when one exists.
+      - name: "plan-to-implement: injects orchestration context"
+        run: |
+          mkdir -p ~/.claude/plans
+          echo "# Test Plan" > ~/.claude/plans/test-plan.md
+
+          output=$(echo '{"tool_name":"ExitPlanMode","tool_input":{}}' \
+            | bun run scripts/plan-to-implement.ts)
+
+          echo "$output" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'hookSpecificOutput' in d" \
+            || { echo "Missing hookSpecificOutput"; exit 1; }
+          echo "$output" | grep -q "plan-to-implement" || { echo "Missing hook tag"; exit 1; }
+          echo "$output" | grep -q "orchestrator" || { echo "Missing orchestrator instructions"; exit 1; }
+          echo "$output" | grep -q "worktree" || { echo "Missing worktree instructions"; exit 1; }
+          echo "$output" | grep -q "self-contained context package" || { echo "Missing context relay constraint"; exit 1; }
+          echo "$output" | grep -q "should NOT do broad codebase exploration" || { echo "Missing exploration constraint"; exit 1; }
+          echo "$output" | grep -q "spec file path" || { echo "Missing spec reference constraint"; exit 1; }
+
+      # ── suggest-commit.ts ───────────────────────────────────────────
+      # Should output valid JSON with expected fields (no staged files).
+      - name: "suggest-commit: outputs valid JSON with no staged files"
+        run: |
+          output=$(bun run scripts/suggest-commit.ts)
+          echo "$output" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert 'suggested_type' in d, 'missing suggested_type'
+          assert 'suggested_scope' in d, 'missing suggested_scope'
+          assert 'type_confidence' in d, 'missing type_confidence'
+          assert 'scope_confidence' in d, 'missing scope_confidence'
+          assert 'files_changed' in d, 'missing files_changed'
+          assert 'file_list' in d, 'missing file_list'
+          assert d['files_changed'] == 0, f'expected 0 files, got {d[\"files_changed\"]}'
+          "
+
+      # Should detect staged test files as type "test".
+      - name: "suggest-commit: detects test file type"
+        run: |
+          mkdir -p src/__tests__
+          echo "test('x', () => {})" > src/__tests__/example.test.ts
+          git add src/__tests__/example.test.ts
+          output=$(bun run scripts/suggest-commit.ts)
+          echo "$output" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert d['suggested_type'] == 'test', f'expected test, got {d[\"suggested_type\"]}'
+          assert d['files_changed'] == 1
+          "
+          git reset HEAD src/__tests__/example.test.ts
+          rm -rf src/__tests__
+
+      # ── validate-spec.ts ────────────────────────────────────────────
+      # Should report complete for a valid spec.
+      - name: "validate-spec: passes valid spec"
+        run: |
+          cat << 'SPEC' | bun run skills/brainstorm/scripts/validate-spec.ts | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert d['complete'] == True, f'expected complete, got warnings: {d.get(\"warnings\")}'
+          "
+          # Test Feature
+
+          ## Problem Statement
+          This solves an important problem.
+
+          ## Scope
+          - **Affected files/components**: src/foo.ts
+          - **New files needed**: none
+          - **Out of scope**: bar
+
+          ## Requirements
+          ### Functional
+          1. [MUST] The system renders the widget
+          2. [SHOULD] It shows a loading state
+
+          ### Non-Functional
+          - Performance: under 100ms
+
+          ## Behavior
+          ### Happy Path
+          1. User clicks button
+          2. Widget renders
+
+          ### Edge Cases
+          - Empty data -> shows placeholder
+          - Network error -> displays error message
+          - Timeout -> retries once
+
+          ## Technical Notes
+          - Uses React 18 concurrent features
+
+          ## Success Criteria
+          - [ ] Widget renders correctly
+          - [ ] Shows loading state
+          - [ ] Returns error on failure
+          SPEC
+
+      # Should report warnings for incomplete spec.
+      - name: "validate-spec: flags incomplete spec"
+        run: |
+          echo "# Bare Spec" | bun run skills/brainstorm/scripts/validate-spec.ts | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          assert d['complete'] == False, 'expected incomplete'
+          assert len(d['warnings']) > 0, 'expected warnings'
+          "
+
+  validate-hooks-json:
+    name: Validate hooks.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ensure hooks.json is valid JSON.
+      - name: Parse hooks.json
+        run: python3 -c "import json; json.load(open('hooks/hooks.json'))"
+
+      # Verify expected hook matchers are present.
+      - name: Verify hook matchers
+        run: |
+          python3 -c "
+          import json
+          with open('hooks/hooks.json') as f:
+              hooks = json.load(f)['hooks']
+
+          pre = [h['matcher'] for h in hooks.get('PreToolUse', [])]
+          post = [h['matcher'] for h in hooks.get('PostToolUse', [])]
+
+          assert 'Bash' in pre, 'Missing Bash PreToolUse hook'
+          assert 'EnterPlanMode' in pre, 'Missing EnterPlanMode PreToolUse hook'
+          assert 'ExitPlanMode' in pre, 'Missing ExitPlanMode PreToolUse hook'
+          assert 'Write' in post, 'Missing Write PostToolUse hook'
+          assert 'Edit' in post, 'Missing Edit PostToolUse hook'
+          print('All expected hook matchers present')
+          "
+
+      # Verify safety nets (|| exit 0) on non-blocking hooks.
+      - name: Verify safety nets
+        run: |
+          python3 -c "
+          import json
+          with open('hooks/hooks.json') as f:
+              hooks = json.load(f)['hooks']
+
+          for h in hooks.get('PreToolUse', []):
+              if h['matcher'] == 'EnterPlanMode':
+                  cmd = h['hooks'][0]['command']
+                  assert '|| exit 0' in cmd, f'EnterPlanMode hook missing safety net: {cmd}'
+
+          for h in hooks.get('PostToolUse', []):
+              cmd = h['hooks'][0]['command']
+              assert '|| exit 0' in cmd, f'PostToolUse {h[\"matcher\"]} hook missing safety net: {cmd}'
+
+          print('Safety nets verified')
+          "

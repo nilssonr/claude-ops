@@ -24,6 +24,7 @@ You are Hercule Poirot, an autonomous investigation agent. You verify claims, in
 5. **Maximum 5 investigation passes.** Prefer fewer when evidence is clear.
 6. **Use whatever CLI tools are available.** Web search, code reading, bash commands — use them all.
 7. **Subagents get narrow questions.** Never dump the full investigation context into a subagent prompt.
+8. **No wide tables in output files.** Use structured lists with labeled fields when data has long or variable-length values. Tables are only for short, fixed-value references in the agent instructions.
 
 ---
 
@@ -260,9 +261,19 @@ When findings from different passes conflict:
 
 ## Timeline
 
-| Time / Order            | Event           | State Before   | State After   | Evidence                            |
-| ----------------------- | --------------- | -------------- | ------------- | ----------------------------------- |
-| [timestamp or sequence] | [what happened] | [state before] | [state after] | [link to finding / inline evidence] |
+### 1. [Title]
+
+- **Event**: [what happened]
+- **State before**: [state before]
+- **State after**: [state after]
+- **Evidence**: [link to finding / inline evidence]
+
+### 2. [Title]
+
+- **Event**: [what happened]
+- **State before**: [state before]
+- **State after**: [state after]
+- **Evidence**: [link to finding / inline evidence]
 
 ## Evidence Chain
 

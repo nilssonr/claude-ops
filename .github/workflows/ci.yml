@@ -127,6 +127,70 @@ jobs:
           echo '{"tool_name":"Bash","tool_input":{"command":"gh pr create --title \"fix(api): handle timeout\""}}' \
             | bun run scripts/git-guard.ts > /dev/null
 
+      # ── branch-gate.ts ──────────────────────────────────────────────
+      # Should block edit on default branch (exit 2).
+      - name: "branch-gate: blocks edit on default branch"
+        run: |
+          git checkout -B main
+          set +e
+          echo "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$(pwd)/test.ts\"}}" \
+            | bun run scripts/branch-gate.ts 2>/tmp/stderr
+          code=$?
+          [ "$code" -eq 2 ] || { echo "Expected exit 2, got $code"; exit 1; }
+          grep -q "Create a feature branch first" /tmp/stderr || { echo "Missing block message"; exit 1; }
+
+      # Should allow edit on feature branch (exit 0).
+      - name: "branch-gate: allows edit on feature branch"
+        run: |
+          git checkout -b feat/test-branch
+          echo "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$(pwd)/test.ts\"}}" \
+            | bun run scripts/branch-gate.ts
+          git checkout -
+
+      # Should allow edit outside project dir (exit 0).
+      - name: "branch-gate: allows edit outside project dir"
+        run: |
+          echo '{"tool_name":"Edit","tool_input":{"file_path":"/tmp/outside.ts"}}' \
+            | bun run scripts/branch-gate.ts
+
+      # Should exit cleanly with no file_path (exit 0).
+      - name: "branch-gate: exits cleanly with no file_path"
+        run: |
+          echo '{"tool_name":"Edit","tool_input":{}}' \
+            | bun run scripts/branch-gate.ts
+
+      # ── commit-check.ts ──────────────────────────────────────────────
+      # Should allow stop when working tree is clean.
+      - name: "commit-check: allows stop when clean"
+        run: |
+          output=$(echo '{"stop_hook_active":false}' | bun run scripts/commit-check.ts)
+          [ -z "$output" ] || { echo "Expected no output, got: $output"; exit 1; }
+
+      # Should block stop with uncommitted changes.
+      - name: "commit-check: blocks stop with uncommitted changes"
+        run: |
+          echo "dirty" >> README.md
+          output=$(echo '{"stop_hook_active":false}' | bun run scripts/commit-check.ts)
+          echo "$output" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['decision']=='block'" \
+            || { echo "Expected block decision"; exit 1; }
+          git checkout -- README.md
+
+      # Should allow stop when stop_hook_active is true.
+      - name: "commit-check: allows stop when stop_hook_active"
+        run: |
+          echo "dirty" >> README.md
+          output=$(echo '{"stop_hook_active":true}' | bun run scripts/commit-check.ts)
+          [ -z "$output" ] || { echo "Expected no output, got: $output"; exit 1; }
+          git checkout -- README.md
+
+      # Should allow stop in plan mode.
+      - name: "commit-check: allows stop in plan mode"
+        run: |
+          echo "dirty" >> README.md
+          output=$(echo '{"stop_hook_active":false,"permission_mode":"plan"}' | bun run scripts/commit-check.ts)
+          [ -z "$output" ] || { echo "Expected no output, got: $output"; exit 1; }
+          git checkout -- README.md
+
       # ── spec-to-plan.ts ─────────────────────────────────────────────
       # Should exit silently on wrong tool_name.
       - name: "spec-to-plan: ignores non-EnterPlanMode tools"
@@ -196,7 +260,7 @@ jobs:
           echo "$output" | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'hookSpecificOutput' in d" \
             || { echo "Missing hookSpecificOutput"; exit 1; }
           echo "$output" | grep -q "plan-to-implement" || { echo "Missing hook tag"; exit 1; }
-          echo "$output" | grep -q "orchestrator" || { echo "Missing orchestrator instructions"; exit 1; }
+          echo "$output" | grep -q "developer" || { echo "Missing developer instructions"; exit 1; }
           echo "$output" | grep -q "worktree" || { echo "Missing worktree instructions"; exit 1; }
           echo "$output" | grep -q "self-contained context package" || { echo "Missing context relay constraint"; exit 1; }
           echo "$output" | grep -q "should NOT do broad codebase exploration" || { echo "Missing exploration constraint"; exit 1; }
@@ -313,10 +377,12 @@ jobs:
           post = [h['matcher'] for h in hooks.get('PostToolUse', [])]
 
           assert 'Bash' in pre, 'Missing Bash PreToolUse hook'
+          assert 'Edit|Write' in pre, 'Missing Edit|Write PreToolUse hook'
           assert 'EnterPlanMode' in pre, 'Missing EnterPlanMode PreToolUse hook'
           assert 'ExitPlanMode' in pre, 'Missing ExitPlanMode PreToolUse hook'
           assert 'Write' in post, 'Missing Write PostToolUse hook'
           assert 'Edit' in post, 'Missing Edit PostToolUse hook'
+          assert 'Stop' in hooks, 'Missing Stop event'
           print('All expected hook matchers present')
           "
 
@@ -328,14 +394,21 @@ jobs:
           with open('hooks/hooks.json') as f:
               hooks = json.load(f)['hooks']
 
+          enforcement = {'Bash', 'Edit|Write'}
+          non_blocking = {'EnterPlanMode', 'ExitPlanMode'}
           for h in hooks.get('PreToolUse', []):
-              if h['matcher'] == 'EnterPlanMode':
-                  cmd = h['hooks'][0]['command']
-                  assert '|| exit 0' in cmd, f'EnterPlanMode hook missing safety net: {cmd}'
+              matcher = h['matcher']
+              for hook in h['hooks']:
+                  cmd = hook['command']
+                  if matcher in enforcement:
+                      assert '|| exit 0' not in cmd, f'Enforcement hook {matcher} must NOT have safety net: {cmd}'
+                  elif matcher in non_blocking:
+                      assert '|| exit 0' in cmd, f'{matcher} hook missing safety net: {cmd}'
 
           for h in hooks.get('PostToolUse', []):
-              cmd = h['hooks'][0]['command']
-              assert '|| exit 0' in cmd, f'PostToolUse {h[\"matcher\"]} hook missing safety net: {cmd}'
+              for hook in h['hooks']:
+                  cmd = hook['command']
+                  assert '|| exit 0' in cmd, f'PostToolUse {h[\"matcher\"]} hook missing safety net: {cmd}'
 
           print('Safety nets verified')
           "

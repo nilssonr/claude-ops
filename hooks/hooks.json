@@ -31,6 +31,16 @@
         ]
       }
     ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run scripts/commit-check.ts"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -38,6 +48,15 @@
           {
             "type": "command",
             "command": "bun run scripts/git-guard.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run scripts/branch-gate.ts"
           }
         ]
       },
@@ -55,7 +74,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun run scripts/plan-to-implement.ts"
+            "command": "bun run scripts/plan-to-implement.ts || exit 0"
           }
         ]
       }

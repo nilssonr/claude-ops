@@ -35,29 +35,19 @@ console.log(
   JSON.stringify({
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
-      additionalContext: `[Hook: plan-to-implement] MANDATORY: When this plan is approved, you MUST spawn a single general-purpose orchestrator agent to execute it. Do NOT implement the plan yourself — delegate entirely.
+      additionalContext: `[Hook: plan-to-implement] MANDATORY: When this plan is approved, you MUST orchestrate it yourself by spawning developer agents directly. Do NOT delegate to an intermediary agent.
 
-Spawn the agent using:
-  Agent tool:
-    subagent_type: "general-purpose"
-    description: "Orchestrate plan implementation"
-    prompt: (see below)
-
-The orchestrator agent prompt MUST include:
-1. The plan file path: ${planFile}
-2. These constraints:
-   - Read the plan file first. Understand ALL steps before spawning anything.
-   - Identify which steps can run in parallel vs which have dependencies.
-   - For each independent work stream, spawn a claude-ops:developer agent with isolation: "worktree" and mode: "bypassPermissions".
-   - Run independent streams in parallel. Run dependent streams sequentially after their dependencies complete.
-   - Each plan step contains a self-contained context package (spec requirements, code excerpts, file paths). When spawning a developer agent, include the FULL step content in the agent's prompt — do NOT summarize or omit code excerpts.
-   - Developer agents should NOT do broad codebase exploration (Glob/Grep across the whole repo). The plan step gives them exact files and existing code. They read only the specific files listed in their step.
-   - If the plan header references a spec file path, read and include it in the orchestrator's context for requirement consultation during execution.
-   - After all agents finish, collect the worktree branch names from their results.
-   - Merge each branch into the current branch using: git merge <branch> --no-ff
-   - If a merge conflict occurs, STOP merging. Report the conflict (files, branches) and do NOT attempt to resolve it.
-   - After merging, report a summary: which groups succeeded, which failed, commit list, and suggested next steps.
-3. Tell the orchestrator to use its own judgment for grouping and parallelization — do NOT require any rigid plan format.`,
+Implementation steps:
+1. Read the plan file at ${planFile}. Understand ALL steps before spawning anything.
+2. If the plan header references a spec file path, read it for requirement context.
+3. Group steps by dependencies — identify which can run in parallel vs sequentially.
+4. For each step, spawn a claude-ops:developer agent with isolation: "worktree", mode: "bypassPermissions", and run_in_background: true.
+5. Each plan step contains a self-contained context package (spec requirements, code excerpts, file paths). Include the FULL step content in each agent's prompt — do NOT summarize or omit code excerpts.
+6. Developer agents should NOT do broad codebase exploration (Glob/Grep across the whole repo). The plan step gives them exact files and existing code.
+7. Wait for background agent notifications — do NOT poll with TaskOutput.
+8. After all agents complete, merge each worktree branch into the current branch: git merge <branch> --no-ff
+9. If a merge conflict occurs, STOP merging. Report the conflict (files, branches) and do NOT attempt to resolve it.
+10. Report a summary: which steps succeeded, which failed, commit list, and suggested next steps.`,
     },
   }),
 );

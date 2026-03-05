@@ -31,35 +31,7 @@
         ]
       }
     ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/scripts/commit-check.ts"
-          }
-        ]
-      }
-    ],
     "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/scripts/git-guard.ts"
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/scripts/branch-gate.ts"
-          }
-        ]
-      },
       {
         "matcher": "EnterPlanMode",
         "hooks": [

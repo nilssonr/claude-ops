@@ -27,11 +27,10 @@ Skills, agents, and hooks for Claude Code.
 
 ## Hooks
 
-| Hook              | Type                      | Description                                                                             |
-| ----------------- | ------------------------- | --------------------------------------------------------------------------------------- |
-| git-guard         | PreToolUse (Bash)         | Enforces conventional commits, branch naming, branch protection, and staging discipline |
-| auto-format       | PostToolUse (Write, Edit) | Runs appropriate formatter after file modifications                                     |
-| plan-to-implement | PreToolUse (ExitPlanMode) | Injects orchestration constraints for post-plan execution                               |
+| Hook              | Type                      | Description                                               |
+| ----------------- | ------------------------- | --------------------------------------------------------- |
+| auto-format       | PostToolUse (Write, Edit) | Runs appropriate formatter after file modifications       |
+| plan-to-implement | PreToolUse (ExitPlanMode) | Injects orchestration constraints for post-plan execution |
 
 ## Interface Design
 
